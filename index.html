@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orbita — Da Nang</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800&family=Onest:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF0F8;--card:#fff;--ink:#12163A;--mut:#5E6388;--acc:#4A3CFF;--on:#fff;--hot:#FF5470;--ok:#0E9F66;--star:#FFB81C;--line:#D9DCEE;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1130;--card:#1A1E48;--ink:#EEF0FF;--mut:#9A9FCB;--acc:#8F86FF;--on:#0E1130;--line:#2D3270}}
+:root[data-theme="dark"]{--bg:#0E1130;--card:#1A1E48;--ink:#EEF0FF;--mut:#9A9FCB;--acc:#8F86FF;--on:#0E1130;--line:#2D3270}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.45 Onest,system-ui,sans-serif;padding-bottom:calc(90px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto}
+h1,h2{font-family:Unbounded,Onest,sans-serif;margin:0}
+header{padding:18px 18px 6px;position:relative}#lg{position:absolute;right:18px;top:22px;padding:6px 12px}
+h1{font-size:34px;font-weight:800;color:var(--acc);letter-spacing:-.5px}
+.sub{color:var(--mut);margin:2px 0 0}
+main{padding:0 14px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 4px 12px}
+.chip{flex:none;border:1.5px solid var(--line);background:transparent;color:var(--ink);padding:8px 14px;border-radius:99px;font:500 14px Onest,sans-serif;cursor:pointer}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.card{display:block;background:var(--card);border-radius:18px;padding:12px;margin-bottom:12px;cursor:pointer}
+.time{flex:none;width:76px;border-radius:14px;background:var(--acc);color:var(--on);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 0}
+.time.today{background:var(--hot);color:#fff}
+.time b{font:800 20px Unbounded,sans-serif}.time span{font-size:12px;font-weight:500}
+.info{flex:1;min-width:0}
+.info h3{margin:0 0 2px;font-size:17px;line-height:1.25}
+.muted{color:var(--mut);font-size:14px}
+.bar{height:6px;border-radius:9px;background:var(--line);margin:9px 0 6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:9px}
+.row{display:flex;justify-content:space-between;font-size:14px;font-weight:500}
+.tag{color:var(--ok);font-weight:600}
+.tabbar{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:6px;background:var(--card);border-top:1px solid var(--line);padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));z-index:5}
+.tab{flex:1;max-width:170px;border:0;background:transparent;color:var(--mut);padding:10px 4px;border-radius:12px;font:600 14px Onest,sans-serif;cursor:pointer}
+.tab.on{background:var(--acc);color:var(--on)}
+.btn{width:100%;border:0;border-radius:14px;background:var(--acc);color:var(--on);padding:15px;font:600 16px Onest,sans-serif;cursor:pointer;margin-top:6px}
+.btn.alt{background:transparent;color:var(--hot);border:1.5px solid var(--hot)}
+.btn[disabled]{opacity:.45;cursor:default}
+.btn.sm{width:auto;padding:9px 14px;font-size:14px}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 5px}
+input,select,textarea{width:100%;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:12px;font:400 16px Onest,sans-serif}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}
+.big{font:800 52px Unbounded,sans-serif;color:var(--acc);line-height:1}
+.stars{height:8px;border-radius:9px;background:var(--line);margin:12px 0 8px;overflow:hidden}
+.stars i{display:block;height:100%;background:var(--star)}
+#sheet{position:fixed;inset:0;background:rgba(10,12,40,.55);display:none;align-items:flex-end;justify-content:center;z-index:10}
+#sheet.on{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:88%;overflow-y:auto;border-radius:24px 24px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+.sheet h2{font-size:22px;margin-bottom:6px}
+ul.l{padding-left:18px;margin:4px 0}
+#toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;z-index:30;pointer-events:none;max-width:90%;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+.empty{text-align:center;color:var(--mut);padding:30px 10px}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+#gate{position:fixed;inset:0;background:var(--bg);z-index:20;overflow-y:auto;padding:calc(20px + env(safe-area-inset-top,0px)) 18px 30px}
+#gate.off{display:none}.gi{max-width:560px;margin:0 auto}
+.terms ol{padding-left:20px;margin:10px 0}.terms li{margin-bottom:9px}
+.ck{display:flex;gap:10px;align-items:flex-start;margin:12px 0;font-size:15px}.ck input{width:22px;height:22px;flex:none}.ck label{margin:0;font-weight:400}
+.msgs{height:230px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px}
+.msgs.tall{height:52vh;min-height:240px}
+.m{max-width:82%;padding:8px 11px;border-radius:14px;background:var(--bg);align-self:flex-start}
+.m b{display:block;font-size:12px;color:var(--mut)}
+.m.me{align-self:flex-end;background:var(--acc);color:var(--on)}.m.me b{color:inherit;opacity:.8}
+.cin{display:flex;gap:8px;margin-top:8px}.cin .btn{flex:none;width:auto;margin:0;padding:12px 16px}
+.ban{background:rgba(255,84,112,.14);color:var(--hot);border-radius:12px;padding:10px;margin-top:8px;font-size:14px}
+.ph{height:130px;border-radius:12px;background:var(--line) center/cover;display:flex;align-items:center;justify-content:center;font-size:44px;margin-bottom:10px}
+.ph:not([style]){background:linear-gradient(135deg,var(--acc),var(--hot))}
+.cr{display:flex;gap:12px;margin-top:10px}
+.cr:first-child{margin-top:0}
+</style></head>
+<body>
+<header><h1>Orbita</h1><p class="sub">Дананг — что затеяли сегодня</p><button class="chip" id="lg" onclick="setLang()">EN</button></header>
+<main id="app"></main>
+<nav class="tabbar">
+<button class="tab" data-t="feed" onclick="go('feed')">Лента</button>
+<button class="tab" data-t="city" onclick="go('city')">Город</button>
+<button class="tab" data-t="new" onclick="go('new')">Создать</button>
+<button class="tab" data-t="me" onclick="go('me')">Профиль</button>
+</nav>
+<div id="sheet" onclick="if(event.target===this)closeS()"><div class="sheet" id="sc"></div></div>
+<div id="toast"></div>
+<div id="gate"></div>
+<script>
+const CATS={all:'Всё',sport:'Спорт',hike:'Походы',dance:'Танцы',food:'Костёр и еда',chill:'Кино и игры'};
+let EV=[];
+const ME={rel:3.5,going:[],log:[],name:'',created:0};
+let S={tab:'feed',cat:'all'},tt,nid=10,PH=null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const f1=n=>(Math.round(n*10)/10).toString().replace('.',',');
+const lvl=r=>r>=4.5?'Мастер-организатор':r>=3.5?'Надёжный':r>=2.5?'Иногда подводит':'Часто пропадает';
+const STARS=['Лена','Артём','Мария'],cap=()=>ME.created?5:4.4;
+const OVR={},DS=[];
+const isStar=n=>(OVR[n]||0)<3&&(STARS.includes(n)||(n===(ME.name||'Вы')&&ME.rel>=4.5));
+const nm=n=>esc(n)+(isStar(n)?' ⭐':'');
+const EMO={sport:'⚽',hike:'🥾',dance:'💃',food:'🔥',chill:'🎬'};
+const ph=e=>e.img?`<div class="ph" style="background-image:url(${e.img})"></div>`:`<div class="ph">${EMO[e.c]||'✨'}</div>`;
+const money=e=>e.price?`~${e.price.toLocaleString('en-US').replace(/,/g,' ')} ₫ на месте`:'Бесплатно';
+function pickPhoto(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);PH=c.toDataURL('image/jpeg',.7);toast('Фото добавлено')};im.src=r.result};r.readAsDataURL(f)}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('on'),2200)}
+function go(t){S.tab=t;render();window.scrollTo(0,0)}
+function render(){
+ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===S.tab));
+ $('#app').innerHTML=S.tab==='feed'?feed():S.tab==='city'?city():S.tab==='new'?form():me();paintBan();scrollMsgs()}
+function feed(){
+ const chips=Object.entries(CATS).map(([k,v])=>`<button class="chip ${S.cat===k?'on':''}" onclick="S.cat='${k}';render()">${v}</button>`).join('');
+ const list=EV.filter(e=>!e.done&&(S.cat==='all'||e.c===S.cat));
+ const cards=list.map(e=>{const full=e.j>=e.need,go=ME.going.includes(e.id);
+ return `<div class="card" onclick="openE(${e.id})">${ph(e)}<div class="cr"><div class="time ${e.d==='Сегодня'?'today':''}"><b>${esc(e.h)}</b><span>${esc(e.d)}</span></div>
+ <div class="info"><h3>${esc(e.t)}</h3><div class="muted">${esc(e.p)}</div>
+ <div class="bar"><i style="width:${Math.min(100,e.j/e.need*100)}%"></i></div>
+ <div class="row"><span class="${full?'tag':''}">${full?'Набрались, погнали':e.j+' из '+e.need}</span><span class="tag">${go?'вы идёте':''}</span></div>
+ <div class="muted" style="margin-top:3px">${money(e)}</div></div></div></div>`}).join('');
+ return `<div class="chips">${chips}</div>${cards||'<div class="empty">Тут пока пусто. Придумайте что-нибудь сами: вкладка «Создать».</div>'}`}
+function openE(id){
+ const e=EV.find(x=>x.id===id),go=ME.going.includes(id),full=e.j>=e.need,low=ME.rel<e.min;
+ let b;
+ if(e.mine)b=mineBox(e);
+ else if(go)b=`<button class="btn alt" onclick="leave(${id})">Отменить запись</button><p class="muted">Отмена в день события снижает уровень на 0,3.</p>`;
+ else if(full)b='<button class="btn" disabled>Мест нет</button>';
+ else if(low)b=`<button class="btn" disabled>Нужен уровень от ${f1(e.min)}</button>`;
+ else b=`<button class="btn" onclick="join(${id})">Записаться</button><p class="muted">${esc(money(e))}. Скидываетесь организатору напрямую.</p>`;
+ const chat=e.mine||go?`<h2 style="font-size:17px;margin:18px 0 8px">Чат участников</h2>${chatBox('e'+id)}`:'<p class="muted" style="margin-top:14px">Чат участников откроется после записи.</p>';
+ $('#sc').innerHTML=`${ph(e)}<h2>${esc(e.t)}</h2><p class="muted">${esc(e.d)}, ${esc(e.h)} · ${esc(e.p)}</p>
+ <p class="muted">Организатор: <b>${e.mine?'вы':nm(e.org)}</b></p>
+ <div class="bar"><i style="width:${Math.min(100,e.j/e.need*100)}%"></i></div><p><b>${e.j} из ${e.need}</b> · осталось мест: ${Math.max(0,e.need-e.j)}</p>
+ <label>Возьмите с собой</label><div>${esc(e.bring||'—')}</div><label>Есть у организатора</label><div>${esc(e.has||'—')}</div>
+ <div style="margin-top:14px">${b}</div>${chat}`;
+ $('#sheet').classList.add('on');paintBan();scrollMsgs()}
+function closeS(){$('#sheet').classList.remove('on')}
+function join(id){const e=EV.find(x=>x.id===id);e.j++;ME.going.push(id);render();openE(id);toast(e.j>=e.need?'Набрались. Погнали!':'Вы записаны')}
+function leave(id){const e=EV.find(x=>x.id===id);e.j--;ME.going=ME.going.filter(x=>x!==id);
+ if(e.d==='Сегодня')ME.rel=Math.max(1,ME.rel-.3);closeS();render();toast('Запись отменена')}
+function form(){
+ return `<div class="panel"><h2 style="font-size:20px">Новое занятие</h2>
+ <label for="f_f">Фото события (обязательно)</label><input id="f_f" type="file" accept="image/*" onchange="pickPhoto(this)">
+ <label for="f_t">Название</label><input id="f_t" placeholder="Например: волейбол на пляже">
+ <label for="f_c">Категория</label><select id="f_c">${Object.entries(CATS).filter(([k])=>k!=='all').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+ <div class="two"><div><label for="f_d">Когда</label><select id="f_d"><option>Сегодня</option><option>Завтра</option><option>Сб</option><option>Вс</option></select></div>
+ <div><label for="f_h">Время</label><input id="f_h" type="time" value="19:00"></div></div>
+ <label for="f_p">Место</label><input id="f_p" placeholder="Куда приходить">
+ <div class="two"><div><label for="f_n">Сколько человек</label><input id="f_n" type="number" min="2" max="40" value="6"></div>
+ <div><label for="f_r">Скидываемся, ₫</label><input id="f_r" type="number" min="0" value="0"></div></div>
+ <label for="f_m">Минимальный уровень</label><select id="f_m"><option value="0">Любая</option><option value="3">от 3</option><option value="4">от 4</option><option value="4.5">от 4,5</option></select>
+ <label for="f_b">Что взять участникам</label><input id="f_b" placeholder="Воду, удобную обувь">
+ <label for="f_h2">Что есть у вас (на что скидываемся)</label><input id="f_h2" placeholder="Палки, сидушки, мангал">
+ <div style="margin-top:18px"><button class="btn" onclick="create()">Опубликовать</button></div></div>`}
+function create(){
+ const v=i=>$('#'+i).value.trim();
+ if(!PH){toast('Добавьте фото события');return}
+ if(!v('f_t')||!v('f_p')){toast('Укажите название и место');return}
+ const n=Math.max(2,Math.min(40,+v('f_n')||2));
+ const e={id:nid++,t:v('f_t'),c:v('f_c'),d:v('f_d'),h:v('f_h')||'19:00',p:v('f_p'),need:n,j:1,price:Math.max(0,+v('f_r')||0),min:+v('f_m'),org:ME.name||'Вы',bring:v('f_b'),has:v('f_h2'),img:PH,mine:1,ppl:[],att:{}};
+ EV.unshift(e);ME.going.push(e.id);ME.created++;PH=null;S.cat='all';go('feed');toast('Опубликовано. Ждём ещё '+(n-1))}
+function mark(id,ok){
+ ME.going=ME.going.filter(x=>x!==id);const e=EV.find(x=>x.id===id);
+ ME.rel=ok?Math.min(cap(),ME.rel+.2):Math.max(1,ME.rel-.5);
+ ME.log.unshift((ok?'Пришли: ':'Не пришли: ')+e.t);
+ if(!ok)DS.push({k:nid++,t:e.t,org:e.org,as:'part',st:'marked'});
+ render();toast(ok?'Уровень +0,2':'Уровень −0,5')}
+function me(){
+ const own=EV.filter(e=>e.mine&&!e.done).map(e=>`<div class="panel"><b>${esc(e.t)}</b><div class="muted">${esc(e.d)}, ${esc(e.h)} · участников: ${e.ppl.length}</div>
+ <button class="btn sm" style="margin-top:10px" onclick="finish(${e.id});$('#sheet').classList.add('on')">Событие прошло: отметить участников</button></div>`).join('');
+ const g=ME.going.map(id=>EV.find(x=>x.id===id)).filter(e=>e&&!e.mine).map(e=>`<div class="panel"><b>${esc(e.t)}</b><div class="muted">${esc(e.d)}, ${esc(e.h)}</div>
+ <div class="two" style="margin-top:10px"><button class="btn sm" onclick="mark(${e.id},true)">Демо: пришёл</button><button class="btn sm alt" onclick="mark(${e.id},false)">Демо: не пришёл</button></div></div>`).join('');
+ return `<div class="panel"><div class="muted">${ME.name?nm(ME.name):'Ваш уровень'}</div><div class="big">${f1(ME.rel)}</div>
+ <div class="stars"><i style="width:${ME.rel/5*100}%"></i></div><div>${lvl(ME.rel)}</div>
+ <p class="muted">Считается только по посещаемости: пришли +0,2, записались и пропали −0,5, отмена в день события −0,3. Потолок для обычных участников 4,4; уровни 4,5–5 только у тех, кто создал событие.</p></div>
+ <div class="panel"><b>Чат</b><p class="muted" style="margin:6px 0 10px">${chatStatus()}</p><button class="btn sm" onclick="resetMod()">Демо: снять ограничения</button></div>
+ ${dsHTML()}
+ <div class="panel"><button class="btn sm" onclick="terms()">Условия участия</button></div>
+ ${own?'<h2 style="font-size:17px;margin:18px 4px 8px">Мои события</h2>'+own:''}
+ ${g?'<h2 style="font-size:17px;margin:18px 4px 8px">Мои записи</h2>'+g+'<p class="muted" style="margin:0 4px 14px">Приход вам отмечает организатор после события.</p>':''}
+ ${ME.log.length?'<h2 style="font-size:17px;margin:18px 4px 8px">История</h2><ul class="l">'+ME.log.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':''}`}
+/* chats + moderation */
+const CH={city:[{u:'Лена',t:'Кто завтра на Сон Тра? Осталось 3 места'},{u:'Артём',t:'Ищем четвёртого на падел сегодня!'}]};
+const MOD={strikes:0,until:0,why:'',ts:[],last:[]},HRS=[1,6,24,72];
+const LAT={a:'а',e:'е',o:'о',p:'р',c:'с',x:'х',y:'у',k:'к',m:'м',h:'н',b:'в',t:'т'};
+const norm=t=>t.replace(/ё/g,'е').replace(/[a-z]/g,c=>LAT[c]||c);
+const MAT=/хуй|хуе|хуи|пизд|ебан|ебат|ебал|ебуч|ебну|заеб|бляд|блят|сука|сучк|мудак|мудил|залуп|пидор|пидар|гондон|шлюх/;
+function bad(t){const l=t.toLowerCase();
+ if(l.split(/\s+/).some(w=>MAT.test(norm(w))))return'мат';
+ if(/https?:|www\.|t\.me|@\w{4,}|\.(ru|com|net|org|me)\b/i.test(t))return'ссылки и реклама';
+ if(/\+?\d[\d\s\-()]{8,}/.test(t))return'телефоны';
+ if(t.length>=6&&/[A-ZА-ЯЁ]/.test(t)&&t===t.toUpperCase())return'КАПС';
+ if(MOD.last.includes(l))return'повтор сообщения';
+ return null}
+const banned=()=>MOD.until>Date.now();
+function banHTML(){if(!banned())return'';const m=Math.ceil((MOD.until-Date.now())/6e4),d=new Date(MOD.until),z=n=>String(n).padStart(2,'0');
+ return `<div class="ban">Чат закрыт до ${z(d.getHours())}:${z(d.getMinutes())}, осталось ${m} мин. Причина: ${esc(MOD.why)}.</div>`}
+function chatStatus(){if(banned())return'Чат закрыт. Нарушений: '+MOD.strikes;return MOD.strikes?'Чат открыт. Нарушений: '+MOD.strikes:'Чат открыт, нарушений нет'}
+function msgsHTML(k){return(CH[k]||[]).map(m=>`<div class="m ${m.me?'me':''}"><b>${nm(m.u)}</b>${esc(m.t)}</div>`).join('')}
+function chatBox(k){return `<div class="msgs ${k==='city'?'tall':''}" id="m_${k}">${msgsHTML(k)}</div><div id="b_${k}"></div>
+ <div class="cin"><input id="i_${k}" placeholder="Сообщение" maxlength="300" onkeydown="if(event.key==='Enter')send('${k}')"><button class="btn" onclick="send('${k}')">Отправить</button></div>`}
+function paintBan(){document.querySelectorAll('[id^="b_"]').forEach(e=>e.innerHTML=banHTML())}
+function scrollMsgs(){document.querySelectorAll('.msgs').forEach(m=>m.scrollTop=m.scrollHeight)}
+function paintMsgs(k){const m=$('#m_'+k);if(m){m.innerHTML=msgsHTML(k);m.scrollTop=m.scrollHeight}}
+function send(k){const i=$('#i_'+k),t=i.value.trim();if(!t)return;const now=Date.now();
+ if(banned()){paintBan();return}
+ const v=bad(t);
+ if(v){MOD.strikes++;const h=HRS[Math.min(MOD.strikes-1,3)];MOD.until=now+h*36e5;MOD.why=v;i.value='';paintBan();toast('Чат закрыт на '+h+' ч');return}
+ MOD.ts=MOD.ts.filter(x=>now-x<6e4);
+ if(MOD.ts.length>=5){toast('Не больше 5 сообщений в минуту. Подождите немного');return}
+ MOD.ts.push(now);MOD.last=[...MOD.last.slice(-4),t.toLowerCase()];
+ (CH[k]=CH[k]||[]).push({u:ME.name||'Вы',t,me:1});i.value='';paintMsgs(k);
+ const R=['Супер!','Отлично, буду','Принято','Ок, до встречи'],U=['Лена','Артём','Дима','Аня'];
+ setTimeout(()=>{CH[k].push({u:U[Math.random()*4|0],t:R[Math.random()*4|0]});paintMsgs(k)},1800)}
+function resetMod(){MOD.strikes=0;MOD.until=0;MOD.ts=[];MOD.last=[];render();toast('Ограничения сняты')}
+function city(){return `<div class="panel"><b>Общий чат Дананга</b><p class="muted" style="margin:4px 0 10px">Мат, ссылки, телефоны, реклама и КАПС запрещены. До 5 сообщений в минуту.</p>${chatBox('city')}</div>`}
+/* disputes */
+function dsHTML(){if(!DS.length)return'';return '<h2 style="font-size:17px;margin:18px 4px 10px">Спорные отметки</h2>'+DS.map(d=>{
+ const part=d.as==='part';let tx,bt='';
+ if(d.st==='marked'){tx=`Вам поставили «не пришёл»: ${esc(d.t)}. Оспорить можно в течение 48 часов.`;bt=`<button class="btn sm" onclick="dsGo(${d.k},'open')">Оспорить</button>`}
+ else if(d.st==='open'){tx=part?`Ваша жалоба по «${esc(d.t)}» на рассмотрении у модератора.`:`Участник ${esc(d.who)} оспорил отметку по «${esc(d.t)}».`;
+  bt=`<div class="two"><button class="btn sm" onclick="dsGo(${d.k},'won')">Демо: за участника</button><button class="btn sm alt" onclick="dsGo(${d.k},'lost')">Демо: за организатора</button></div>`}
+ else if(d.st==='won')tx=part?'Отметка отменена, уровень +0,5 возвращён. Организатору засчитана отменённая отметка.':'Отметка отменена: уровень −0,3, засчитана отменённая отметка.';
+ else tx='Модератор подтвердил отметку организатора.';
+ return `<div class="panel"><div>${tx}</div>${bt?'<div style="margin-top:10px">'+bt+'</div>':''}</div>`}).join('')}
+function dsGo(k,st){const d=DS.find(x=>x.k===k);d.st=st;
+ if(st==='won'){if(d.as==='part'){ME.rel=Math.min(cap(),ME.rel+.5);OVR[d.org]=(OVR[d.org]||0)+1}else{ME.rel=Math.max(1,ME.rel-.3);const n=ME.name||'Вы';OVR[n]=(OVR[n]||0)+1}}
+ render();toast(st==='open'?'Жалоба отправлена модератору':'Решение принято')}
+/* organizer */
+const NAMES=['Игорь','Катя','Олег','Вика','Макс','Оля','Сева','Дарья'];
+function mineBox(e){return `<p class="muted">Вы организатор. Участники: ${e.ppl.length?e.ppl.map(esc).join(', '):'пока никого'}.</p>
+ <button class="btn sm" onclick="addP(${e.id})">Демо: добавить участника</button>`}
+function addP(id){const e=EV.find(x=>x.id===id),n=NAMES.find(x=>!e.ppl.includes(x));if(!n||e.j>=e.need)return toast('Больше добавить нельзя');e.ppl.push(n);e.j++;render();openE(id)}
+function finish(id){const e=EV.find(x=>x.id===id);
+ const rows=e.ppl.map((n,i)=>`<div class="panel" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>${esc(n)}</b>
+ <span><button class="btn sm ${e.att[n]===1?'':'alt'}" onclick="att(${id},${i},1)">Пришёл</button> <button class="btn sm ${e.att[n]===0?'':'alt'}" onclick="att(${id},${i},0)">Нет</button></span></div>`).join('');
+ const ok=e.ppl.length&&e.ppl.every(n=>n in e.att);
+ $('#sc').innerHTML=`<h2>${esc(e.t)}</h2><p class="muted">Отмечать можно только после начала события (в прототипе это демо).</p>${rows||'<div class="empty">Участников нет.</div>'}<button class="btn" ${ok?'':'disabled'} onclick="conf(${id})">Подтвердить</button>`}
+function att(id,i,v){const e=EV.find(x=>x.id===id);e.att[e.ppl[i]]=v;finish(id)}
+function conf(id){const e=EV.find(x=>x.id===id),n=e.ppl.filter(x=>e.att[x]===1).length;e.done=1;
+ e.ppl.filter(x=>e.att[x]===0).forEach(w=>DS.push({k:nid++,t:e.t,who:w,as:'org',st:'open'}));
+ if(n)ME.rel=Math.min(cap(),ME.rel+.2);
+ ME.log.unshift('Провели «'+e.t+'»: пришли '+n+' из '+e.ppl.length);closeS();render();toast(n?'Организатору +0,2':'Никто не пришёл')}
+/* terms + gate */
+const TERMS=`<div class="terms"><ol>
+<li>«Orbita» это только площадка, где люди находят компанию. Приложение не организует занятия и не отвечает за них.</li>
+<li>Занятия придумывают и проводят сами пользователи. Создатель события такой же участник, а не сотрудник приложения.</li>
+<li>Вы участвуете добровольно и сами оцениваете своё здоровье, подготовку, снаряжение и безопасность.</li>
+<li>Вы принимаете эти риски и отвечаете за свои действия. Любое занятие на свой риск и под свою ответственность.</li>
+<li>Если скидываетесь деньгами, вы передаёте их организатору напрямую. Приложение в расчётах не участвует, закон не нарушается.</li>
+<li>Вам есть 18 лет.</li></ol></div>`;
+function terms(){$('#sc').innerHTML='<h2>Условия участия</h2>'+TERMS+'<div style="margin-top:14px"><button class="btn" onclick="closeS()">Понятно</button></div>';$('#sheet').classList.add('on')}
+function chk(){$('#go').disabled=!($('#a1').checked&&$('#a2').checked)}
+function tgName(){try{const u=window.Telegram.WebApp.initDataUnsafe.user;return(u&&u.first_name)||''}catch(e){return''}}
+function enter(){ME.name=tgName();try{localStorage.setItem('sueta_ok','1');localStorage.setItem('sueta_nm',ME.name)}catch(e){}$('#gate').classList.add('off');render()}
+$('#gate').innerHTML=`<div class="gi"><h1>Orbita</h1><p class="sub">Найди, с кем пойти, поехать или сыграть сегодня</p>
+<h2 style="font-size:19px;margin-top:22px">Прежде чем начать</h2>${TERMS}
+<div class="ck"><input type="checkbox" id="a1" onchange="chk()"><label for="a1">Принимаю условия участия</label></div>
+<div class="ck"><input type="checkbox" id="a2" onchange="chk()"><label for="a2">Мне есть 18 лет</label></div>
+<button class="btn" id="go" disabled onclick="enter()">Войти</button></div>`;
+try{if(localStorage.getItem('sueta_ok')==='1'){ME.name=localStorage.getItem('sueta_nm')||'';$('#gate').classList.add('off')}}catch(e){}
+/* ===== Orbita: language switch RU/EN + Telegram login ===== */
+let LANG='ru';
+try{LANG=localStorage.getItem('orbita_lang')||((navigator.language||'').startsWith('ru')?'ru':'en')}catch(e){}
+const DICT={
+'Дананг — что затеяли сегодня':'Da Nang — what is happening today',
+'Лента':'Feed','Город':'City','Создать':'Create','Профиль':'Profile',
+'Всё':'All','Спорт':'Sport','Походы':'Hikes','Танцы':'Dance','Костёр и еда':'Fire & food','Кино и игры':'Movies & games',
+'Сегодня':'Today','Завтра':'Tomorrow','Сб':'Sat','Вс':'Sun',
+'вы идёте':'you are going','Набрались, погнали':'Full, let\u2019s go','Бесплатно':'Free',
+'Тут пока пусто. Придумайте что-нибудь сами: вкладка «Создать».':'Nothing here yet. Come up with something: use the \u201cCreate\u201d tab.',
+'Отменить запись':'Cancel signup','Мест нет':'No spots left','Записаться':'Sign up',
+'Отмена в день события снижает уровень на 0,3.':'Cancelling on the day of the event lowers your level by 0.3.',
+'Организатор:':'Organizer:','вы':'you',
+'Возьмите с собой':'Bring with you','Есть у организатора':'Organizer provides',
+'Чат участников':'Participants chat','Чат участников откроется после записи.':'The participants chat opens after you sign up.',
+'Вы записаны':'You are signed up','Набрались. Погнали!':'Full. Let\u2019s go!','Запись отменена':'Signup cancelled',
+'Новое занятие':'New activity','Фото события (обязательно)':'Event photo (required)','Название':'Title',
+'Категория':'Category','Когда':'When','Время':'Time','Место':'Place','Сколько человек':'How many people',
+'Скидываемся, ₫':'Chip in, ₫','Минимальный уровень':'Minimum level','Любая':'Any','от 3':'from 3','от 4':'from 4','от 4,5':'from 4.5',
+'Что взять участникам':'What participants bring','Что есть у вас (на что скидываемся)':'What you provide (what we chip in for)',
+'Опубликовать':'Publish','Добавьте фото события':'Add an event photo','Укажите название и место':'Enter a title and place',
+'Фото добавлено':'Photo added',
+'Ваш уровень':'Your level','Мастер-организатор':'Master organizer','Надёжный':'Reliable','Иногда подводит':'Sometimes lets down','Часто пропадает':'Often no-show',
+'Чат':'Chat','Демо: снять ограничения':'Demo: remove restrictions','Условия участия':'Terms of participation',
+'Мои события':'My events','Мои записи':'My signups','История':'History','Спорные отметки':'Disputed marks',
+'Событие прошло: отметить участников':'Event is over: mark participants',
+'Демо: пришёл':'Demo: attended','Демо: не пришёл':'Demo: no-show',
+'Приход вам отмечает организатор после события.':'The organizer marks your attendance after the event.',
+'Считается только по посещаемости: пришли +0,2, записались и пропали −0,5, отмена в день события −0,3. Потолок для обычных участников 4,4; уровни 4,5–5 только у тех, кто создал событие.':'Based on attendance only: showed up +0.2, signed up and vanished \u22120.5, cancel on the day \u22120.3. Cap for regular participants is 4.4; levels 4.5\u20135 only for those who created an event.',
+'Общий чат Дананга':'Da Nang city chat',
+'Мат, ссылки, телефоны, реклама и КАПС запрещены. До 5 сообщений в минуту.':'Profanity, links, phone numbers, ads and ALL CAPS are not allowed. Up to 5 messages per minute.',
+'Сообщение':'Message','Отправить':'Send',
+'Чат открыт, нарушений нет':'Chat is open, no violations',
+'Не больше 5 сообщений в минуту. Подождите немного':'Max 5 messages per minute. Please wait a little',
+'Ограничения сняты':'Restrictions removed',
+'Оспорить':'Dispute','Демо: за участника':'Demo: for participant','Демо: за организатора':'Demo: for organizer',
+'Жалоба отправлена модератору':'Complaint sent to the moderator','Решение принято':'Decision made',
+'Больше добавить нельзя':'Cannot add more',
+'Демо: добавить участника':'Demo: add participant',
+'Подтвердить':'Confirm','Нет':'No','Пришёл':'Attended',
+'Участников нет.':'No participants.',
+'Отмечать можно только после начала события (в прототипе это демо).':'Marking is only possible after the event starts (a demo in this prototype).',
+'Понятно':'Got it','Условия участия ':'Terms of participation',
+'Прежде чем начать':'Before you start',
+'Принимаю условия участия':'I accept the terms of participation','Мне есть 18 лет':'I am 18 or older','Войти':'Enter',
+'Найди, с кем пойти, поехать или сыграть сегодня':'Find someone to go, ride or play with today',
+'Организатору +0,2':'Organizer +0.2','Никто не пришёл':'Nobody came',
+'Уровень +0,2':'Level +0.2','Уровень −0,5':'Level \u22120.5','Опубликовано':'Published',
+'Падел 2×2':'Padel 2\u00d72','Футбол 5×5':'Football 5\u00d75',
+'Поход на гору Сон Тра':'Hike up Son Tra','Бачата для новичков':'Bachata for beginners',
+'Барбекю на пляже':'Beach barbecue','Кино под открытым небом':'Open-air cinema',
+'Падел-клуб, Сон Тра':'Padel club, Son Tra','Сбор у подножия Сон Тра':'Meet at the foot of Son Tra',
+'Студия у реки Хан':'Studio by the Han River','Поле в Хай Тяу':'Field in Hai Chau',
+'Пляж Ми Кхе':'My Khe beach','Кафе на набережной Хан':'Cafe on the Han riverside',
+'Кроссовки, воду':'Sneakers, water','Ракетки и мячи':'Rackets and balls',
+'Треккинговую обувь, воду, перекус':'Hiking shoes, water, a snack','Аптечка, маршрут':'First-aid kit, route',
+'Сменную обувь':'Spare shoes','Колонка и зал':'Speaker and hall','Форму, воду':'Kit, water','Мяч, манишки':'Ball, bibs',
+'Что пожарить, напитки':'Food to grill, drinks','Мангал, уголь, сидушки':'Grill, charcoal, seat pads',
+'Плед, тёплую кофту':'A blanket, a warm top','Проектор и экран':'Projector and screen',
+'Лена':'Lena','Артём':'Artem','Мария':'Maria','Дима':'Dima','Аня':'Anya',
+'Кто завтра на Сон Тра? Осталось 3 места':'Who is up for Son Tra tomorrow? 3 spots left',
+'Ищем четвёртого на падел сегодня!':'Looking for a 4th player for padel today!',
+'Супер!':'Great!','Отлично, буду':'Awesome, I\u2019ll be there','Принято':'Got it','Ок, до встречи':'Ok, see you'
+};
+const PAT=[
+[/^(\d+) из (\d+)$/,'$1 of $2'],
+[/^~([\d ]+) ₫ на месте$/,'~$1 \u20ab on site'],
+[/^Нужен уровень от (.+)$/,'Level $1+ required'],
+[/^(.+)\. Скидываетесь организатору напрямую\.$/,function(m,a){return tr(a)+'. You chip in to the organizer directly.'}],
+[/^(\d+) из (\d+) · осталось мест: (\d+)$/,'$1 of $2 \u00b7 spots left: $3'],
+[/^Чат открыт\. Нарушений: (\d+)$/,'Chat is open. Violations: $1'],
+[/^Чат закрыт\. Нарушений: (\d+)$/,'Chat is closed. Violations: $1'],
+[/^Чат закрыт на (\d+) ч$/,'Chat closed for $1 h'],
+[/^Опубликовано\. Ждём ещё (\d+)$/,'Published. Waiting for $1 more'],
+[/^участников: (\d+)$/,'participants: $1'],
+[/^Вы организатор\. Участники: (.+)\.$/,function(m,a){return 'You are the organizer. Participants: '+(a==='пока никого'?'none yet':a)+'.'}],
+[/^Пришли: (.+)$/,'Attended: $1'],[/^Не пришли: (.+)$/,'No-show: $1']
+];
+function tr(t){
+ if(LANG!=='en')return t;
+ const k=t.trim();if(!k)return t;
+ if(DICT[k]!==undefined)return t.replace(k,DICT[k]);
+ for(const [re,to] of PAT){if(re.test(k))return t.replace(k,k.replace(re,to))}
+ const w=k.split(' · ');
+ if(w.length>1){return t.replace(k,w.map(x=>tr(x)).join(' \u00b7 '))}
+ const c=k.match(/^(Сегодня|Завтра|Сб|Вс), (\d\d:\d\d)$/);
+ if(c)return t.replace(k,DICT[c[1]]+', '+c[2]);
+ return t}
+function trTree(root){
+ if(LANG!=='en'||!root)return;
+ const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;const L=[];
+ while(n=w.nextNode())L.push(n);
+ L.forEach(x=>{const v=tr(x.nodeValue);if(v!==x.nodeValue)x.nodeValue=v});
+ const els=root.nodeType===1?[root,...root.querySelectorAll('[placeholder]')]:[];
+ els.forEach(e=>{const p=e.getAttribute&&e.getAttribute('placeholder');if(p){const v=tr(p);if(v!==p)e.setAttribute('placeholder',v)}})}
+let busy=false;
+new MutationObserver(ms=>{
+ if(LANG!=='en'||busy)return;busy=true;
+ ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.nodeType===3){const v=tr(n.nodeValue);if(v!==n.nodeValue)n.nodeValue=v}else if(n.nodeType===1)trTree(n)}));
+ busy=false}).observe(document.body,{childList:true,subtree:true});
+function setLang(){
+ LANG=LANG==='en'?'ru':'en';
+ try{localStorage.setItem('orbita_lang',LANG)}catch(e){}
+ location.reload()}
+document.documentElement.lang=LANG;
+const lgb=document.getElementById('lg');if(lgb)lgb.textContent=LANG==='en'?'RU':'EN';
+document.title=LANG==='en'?'Orbita \u2014 Da Nang':'Orbita \u2014 Дананг';
+/* Telegram Mini App */
+try{
+ const tg=window.Telegram&&window.Telegram.WebApp;
+ if(tg){tg.ready();tg.expand();
+  const u=tg.initDataUnsafe&&tg.initDataUnsafe.user;
+  if(u&&u.first_name){
+   ME.name=u.first_name;
+   const oe=enter;enter=function(){oe();}}}
+}catch(e){}
+trTree(document.body);
+
+/* ===== Orbita: Supabase data layer ===== */
+const SB_URL='https://scybfdrrwbrlazpqhpll.supabase.co',SB_KEY='sb_publishable_WP4es59btosazZ-Ly5pgbw_41Dx0cRN';
+let sb=null,UID=null,ONLINE=false;
+const DAYS={today:'Сегодня',tomorrow:'Завтра',sat:'Сб',sun:'Вс'},DAYC={'Сегодня':'today','Завтра':'tomorrow','Сб':'sat','Вс':'sun'};
+const LA={};
+EV=[];CH.city=[];
+
+function showErr(m){let b=document.getElementById('errbox');
+ if(!b){b=document.createElement('div');b.id='errbox';
+  b.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:50;background:#FF5470;color:#fff;padding:10px 12px;border-radius:12px;font:13px/1.35 system-ui,sans-serif;word-break:break-word';
+  b.onclick=()=>b.remove();document.body.appendChild(b)}
+ b.textContent=m+'  (нажмите, чтобы скрыть)'}
+window.addEventListener('error',e=>showErr('JS: '+e.message));
+window.addEventListener('unhandledrejection',e=>showErr('JS: '+((e.reason&&e.reason.message)||e.reason)));
+const FRIENDLY={'level too low':'Ваш уровень ниже нужного','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
+function dbErr(e){const m=(e&&e.message)||JSON.stringify(e);
+ for(const k in FRIENDLY){if(m.includes(k)){toast(FRIENDLY[k]);return}}
+ showErr('База: '+m)}
+
+async function initDB(){
+ try{
+  if(!window.supabase)throw new Error('библиотека supabase-js не загрузилась (нет интернета или блокировка)');
+  sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+  let r=await sb.auth.getSession(),session=r.data&&r.data.session;
+  if(!session){const a=await sb.auth.signInAnonymously({options:{data:{name:ME.name||'Guest'}}});
+   if(a.error)throw a.error;session=a.data.session}
+  UID=session.user.id;ONLINE=true;
+  if(!ME.name)ME.name='Гость '+UID.slice(0,4);
+  await sb.from('profiles').update({name:ME.name}).eq('id',UID);
+  await refresh();render();
+  setInterval(()=>{if(!document.hidden)refresh(true)},8000);
+ }catch(e){dbErr(e)}}
+
+async function refresh(quiet){
+ if(!ONLINE)return;
+ try{
+  const [pr,ev,su]=await Promise.all([
+   sb.from('profiles').select('*').eq('id',UID).single(),
+   sb.from('events_feed').select('*').order('created_at',{ascending:false}),
+   sb.from('signups').select('event_id,user_id,status,profiles(name)')]);
+  for(const x of [pr,ev,su])if(x.error)throw x.error;
+  ME.rel=+pr.data.rel;ME.created=pr.data.created_events;
+  const by={};su.data.forEach(s=>{(by[s.event_id]=by[s.event_id]||[]).push(s)});
+  ME.going=[];STARS.length=0;
+  EV=ev.data.map(r=>{
+   const ss=by[r.id]||[],my=ss.find(s=>s.user_id===UID);
+   if(my&&my.status==='going')ME.going.push(r.id);
+   if(r.org_rel>=4.5&&!STARS.includes(r.org_name))STARS.push(r.org_name);
+   const ppl=ss.filter(s=>s.user_id!==r.org&&['going','attended','noshow'].includes(s.status));
+   return{id:r.id,t:r.title,c:r.cat,d:DAYS[r.day],h:r.time,p:r.place,need:r.need,j:r.joined,price:r.price,min:+r.min_level,
+    org:r.org_name,bring:r.bring,has:r.has,img:r.photo,mine:r.org===UID?1:0,done:r.done,
+    ppl:ppl.map(s=>(s.profiles&&s.profiles.name)||'?'),pids:ppl.map(s=>s.user_id),att:{}}});
+  if(quiet&&(S.tab==='feed'||S.tab==='me')&&!$('#sheet').classList.contains('on'))render();
+ }catch(e){if(!quiet)dbErr(e)}}
+
+/* actions */
+join=async function(id){
+ try{const r=await sb.rpc('join_event',{p_event:id});if(r.error)throw r.error;
+  await refresh();render();openE(id);const e=EV.find(x=>x.id===id);
+  toast(e&&e.j>=e.need?'Набрались. Погнали!':'Вы записаны')}catch(e){dbErr(e)}};
+leave=async function(id){
+ try{const r=await sb.rpc('leave_event',{p_event:id});if(r.error)throw r.error;
+  await refresh();closeS();render();toast('Запись отменена')}catch(e){dbErr(e)}};
+create=async function(){
+ const v=i=>$('#'+i).value.trim();
+ if(!PH){toast('Добавьте фото события');return}
+ if(!v('f_t')||!v('f_p')){toast('Укажите название и место');return}
+ const n=Math.max(2,Math.min(40,+v('f_n')||2));
+ try{const r=await sb.rpc('create_event',{p_title:v('f_t'),p_cat:v('f_c'),p_day:DAYC[v('f_d')],p_time:v('f_h')||'19:00',
+   p_place:v('f_p'),p_need:n,p_price:Math.max(0,+v('f_r')||0),p_min:+v('f_m'),p_bring:v('f_b'),p_has:v('f_h2'),p_photo:PH,p_lang:LANG});
+  if(r.error)throw r.error;
+  PH=null;await refresh();S.cat='all';go('feed');toast('Опубликовано. Ждём ещё '+(n-1))}catch(e){dbErr(e)}};
+
+/* organizer: mark attendance */
+mineBox=function(e){return `<p class="muted">Вы организатор. Участники: ${e.ppl.length?e.ppl.map(esc).join(', '):'пока никого'}.</p>`};
+finish=function(id){const e=EV.find(x=>x.id===id),m=LA[id]||{};
+ const rows=e.pids.map((u,i)=>`<div class="panel" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>${esc(e.ppl[i])}</b>
+ <span><button class="btn sm ${m[u]===1?'':'alt'}" onclick="att(${id},${i},1)">Пришёл</button> <button class="btn sm ${m[u]===0?'':'alt'}" onclick="att(${id},${i},0)">Нет</button></span></div>`).join('');
+ const ok=e.pids.length&&e.pids.every(u=>u in m);
+ $('#sc').innerHTML=`<h2>${esc(e.t)}</h2><p class="muted">Отмечать можно только после начала события.</p>${rows||'<div class="empty">Участников нет.</div>'}<button class="btn" ${ok?'':'disabled'} onclick="conf(${id})">Подтвердить</button>`};
+att=function(id,i,v){const e=EV.find(x=>x.id===id);(LA[id]=LA[id]||{})[e.pids[i]]=v;finish(id)};
+conf=async function(id){const e=EV.find(x=>x.id===id),m=LA[id]||{};
+ try{for(const u of e.pids){const r=await sb.rpc('mark_attendance',{p_event:id,p_user:u,p_ok:m[u]===1});if(r.error)throw r.error}
+  const f=await sb.rpc('finish_event',{p_event:id});if(f.error)throw f.error;
+  const n=e.pids.filter(u=>m[u]===1).length;
+  ME.log.unshift('Провели «'+e.t+'»: пришли '+n+' из '+e.pids.length);delete LA[id];
+  await refresh();closeS();render();toast(n?'Организатору +0,2':'Никто не пришёл')}catch(er){dbErr(er)}};
+
+/* chats */
+async function loadMsgs(k){
+ if(!ONLINE)return;
+ try{const r=await sb.from('messages').select('body,user_id,created_at,profiles(name)').eq('scope',k).order('created_at',{ascending:true}).limit(100);
+  if(r.error)throw r.error;
+  const arr=r.data.map(m=>({u:(m.profiles&&m.profiles.name)||'?',t:m.body,me:m.user_id===UID})),old=CH[k]||[];
+  if(arr.length!==old.length||(arr.length&&arr[arr.length-1].t!==old[old.length-1].t)){CH[k]=arr;paintMsgs(k)}
+ }catch(e){}}
+function pollMsgs(){document.querySelectorAll('.msgs').forEach(m=>loadMsgs(m.id.slice(2)))}
+setInterval(()=>{if(!document.hidden)pollMsgs()},4000);
+send=async function(k){const i=$('#i_'+k),t=i.value.trim();if(!t)return;const now=Date.now();
+ if(banned()){paintBan();return}
+ const v=bad(t);
+ if(v){MOD.strikes++;const h=HRS[Math.min(MOD.strikes-1,3)];MOD.until=now+h*36e5;MOD.why=v;i.value='';paintBan();toast('Чат закрыт на '+h+' ч');return}
+ MOD.ts=MOD.ts.filter(x=>now-x<6e4);
+ if(MOD.ts.length>=5){toast('Не больше 5 сообщений в минуту. Подождите немного');return}
+ MOD.ts.push(now);MOD.last=[...MOD.last.slice(-4),t.toLowerCase()];
+ try{const r=await sb.rpc('send_message',{p_scope:k,p_body:t});if(r.error)throw r.error;i.value='';await loadMsgs(k)}catch(e){dbErr(e)}};
+
+/* wrappers */
+const _render=render;
+render=function(){_render();
+ document.querySelectorAll('button[onclick^="mark("]').forEach(b=>{const p=b.closest('.two');if(p)p.remove()});
+ pollMsgs()};
+const _openE=openE;
+openE=function(id){_openE(id);pollMsgs()};
+const _enter=enter;
+enter=function(){_enter();if(!ME.name&&UID)ME.name='Гость '+UID.slice(0,4);if(ONLINE&&ME.name)sb.from('profiles').update({name:ME.name}).eq('id',UID)};
+initDB();
+
+render();
+</script></body></html>
