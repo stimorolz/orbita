@@ -66,6 +66,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .m.me{align-self:flex-end;background:var(--acc);color:var(--on)}.m.me b{color:inherit;opacity:.8}
 .cin{display:flex;gap:8px;margin-top:8px}.cin .btn{flex:none;width:auto;margin:0;padding:12px 16px}
 .ban{background:rgba(255,84,112,.14);color:var(--hot);border-radius:12px;padding:10px;margin-top:8px;font-size:14px}
+.cityimg{height:150px;border-radius:14px;margin-bottom:10px}.m.bot{align-self:center;background:transparent;border:1px dashed var(--line);max-width:94%;font-size:14px;color:var(--mut)}
 .lb{display:inline-block;font:600 11px Onest,sans-serif;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--ink);vertical-align:middle;margin-left:6px}.lb.en{background:var(--acc);color:var(--on)}
 .ph{height:130px;border-radius:12px;background:var(--line) center/cover;display:flex;align-items:center;justify-content:center;font-size:44px;margin-bottom:10px}
 .ph:not([style]){background:linear-gradient(135deg,var(--acc),var(--hot))}
@@ -179,7 +180,7 @@ function me(){
  <p class="muted" style="margin:10px 0 4px"><b>Ходок</b></p><div class="muted">Вы приходите на события. Сходите на 3 события, и организатор отметит, что вы пришли.</div>
  <p class="muted" style="margin:10px 0 4px"><b>Создатель ⭐</b></p><div class="muted">Вы сами собираете людей. Станьте Ходоком, создайте событие и проведите его так, чтобы пришёл хотя бы один человек.</div>
  <p class="muted" style="margin:12px 0 0">Если записаться и не прийти или отменить запись в день события, статус страдает.</p></div>
- <div class="panel"><b>Чат</b><p class="muted" style="margin:6px 0 10px">${chatStatus()}</p><button class="btn sm" onclick="resetMod()">Демо: снять ограничения</button></div>
+ <div class="panel"><b>Чат</b><p class="muted" style="margin:6px 0 10px">${chatStatus()}</p></div>
  ${dsHTML()}
  <div class="panel"><button class="btn sm" onclick="terms()">Условия участия</button></div>
  ${own?'<h2 style="font-size:17px;margin:18px 4px 8px">Мои события</h2>'+own:''}
@@ -187,7 +188,7 @@ function me(){
  ${ME.log.length?'<h2 style="font-size:17px;margin:18px 4px 8px">История</h2><ul class="l">'+ME.log.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':''}`}
 /* chats + moderation */
 const CH={city:[{u:'Лена',t:'Кто завтра на Сон Тра? Осталось 3 места'},{u:'Артём',t:'Ищем четвёртого на падел сегодня!'}]};
-const MOD={strikes:0,until:0,why:'',ts:[],last:[]},HRS=[1,6,24,72];
+const MOD={strikes:0,until:0,forever:false,why:'',ts:[],last:[]},HRS=[1,6,24,72];
 const LAT={a:'а',e:'е',o:'о',p:'р',c:'с',x:'х',y:'у',k:'к',m:'м',h:'н',b:'в',t:'т'};
 const norm=t=>t.replace(/ё/g,'е').replace(/[a-z]/g,c=>LAT[c]||c);
 const MAT=/хуй|хуе|хуи|пизд|ебан|ебат|ебал|ебуч|ебну|заеб|бляд|блят|сука|сучк|мудак|мудил|залуп|пидор|пидар|гондон|шлюх/;
@@ -198,11 +199,12 @@ function bad(t){const l=t.toLowerCase();
  if(t.length>=6&&/[A-ZА-ЯЁ]/.test(t)&&t===t.toUpperCase())return'КАПС';
  if(MOD.last.includes(l))return'повтор сообщения';
  return null}
-const banned=()=>MOD.until>Date.now();
-function banHTML(){if(!banned())return'';const m=Math.ceil((MOD.until-Date.now())/6e4),d=new Date(MOD.until),z=n=>String(n).padStart(2,'0');
+const banned=()=>MOD.forever||MOD.until>Date.now();
+function banHTML(){if(MOD.forever)return `<div class="ban">Аккаунт заблокирован навсегда. Причина: ${esc(MOD.why||'нарушение правил')}. Решение проверяет модератор.</div>`;
+ if(!banned())return'';const m=Math.ceil((MOD.until-Date.now())/6e4),d=new Date(MOD.until),z=n=>String(n).padStart(2,'0');
  return `<div class="ban">Чат закрыт до ${z(d.getHours())}:${z(d.getMinutes())}, осталось ${m} мин. Причина: ${esc(MOD.why)}.</div>`}
-function chatStatus(){if(banned())return'Чат закрыт. Нарушений: '+MOD.strikes;return MOD.strikes?'Чат открыт. Нарушений: '+MOD.strikes:'Чат открыт, нарушений нет'}
-function msgsHTML(k){return(CH[k]||[]).map(m=>`<div class="m ${m.me?'me':''}"><b>${nm(m.u)}</b>${esc(m.t)}</div>`).join('')}
+function chatStatus(){if(MOD.forever)return'Аккаунт заблокирован навсегда';if(banned())return'Чат закрыт. Нарушений: '+MOD.strikes;return MOD.strikes?'Чат открыт. Нарушений: '+MOD.strikes:'Чат открыт, нарушений нет'}
+function msgsHTML(k){return(CH[k]||[]).map(m=>`<div class="m ${m.me?'me':''} ${m.bot?'bot':''}"><b>${m.bot?'Orbita Bot 🤖':nm(m.u)}</b>${esc(m.t)}</div>`).join('')}
 function chatBox(k){return `<div class="msgs ${k==='city'?'tall':''}" id="m_${k}">${msgsHTML(k)}</div><div id="b_${k}"></div>
  <div class="cin"><input id="i_${k}" placeholder="Сообщение" maxlength="300" onkeydown="if(event.key==='Enter')send('${k}')"><button class="btn" onclick="send('${k}')">Отправить</button></div>`}
 function paintBan(){document.querySelectorAll('[id^="b_"]').forEach(e=>e.innerHTML=banHTML())}
@@ -219,7 +221,9 @@ function send(k){const i=$('#i_'+k),t=i.value.trim();if(!t)return;const now=Date
  const R=['Супер!','Отлично, буду','Принято','Ок, до встречи'],U=['Лена','Артём','Дима','Аня'];
  setTimeout(()=>{CH[k].push({u:U[Math.random()*4|0],t:R[Math.random()*4|0]});paintMsgs(k)},1800)}
 function resetMod(){MOD.strikes=0;MOD.until=0;MOD.ts=[];MOD.last=[];render();toast('Ограничения сняты')}
-function city(){return `<div class="panel"><b>Общий чат Дананга</b><p class="muted" style="margin:4px 0 10px">Мат, ссылки, телефоны, реклама и КАПС запрещены. До 5 сообщений в минуту.</p>${chatBox('city')}</div>`}
+const CITY={photo:'danang.jpg',text:'Дананг — город между морем и горами во Вьетнаме, где можно утром сёрфить на пляже Ми Кхе, днём гулять по набережной реки Хан, а вечером ехать на Сон Тра смотреть закат.',pop:'≈ 3 млн жителей',expat:''};
+function cityCard(){const c=CITY;return `<div class="panel"><div class="cityimg" style="background:url(${c.photo}) center/cover,linear-gradient(135deg,var(--acc),var(--hot))"></div><p style="margin:0 0 8px">${c.text}</p><div class="muted"><span>👥</span> <span>${c.pop}</span>${c.expat?' · <span>'+c.expat+'</span>':''}</div></div>`}
+function city(){return cityCard()+`<div class="panel"><b>Общий чат Дананга</b><p class="muted" style="margin:4px 0 10px">Реклама, ссылки, контакты и мат запрещены. За рекламу интим-услуг и наркотиков блокировка навсегда. До 5 сообщений в минуту.</p>${chatBox('city')}</div>`}
 /* disputes */
 function dsHTML(){if(!DS.length)return'';return '<h2 style="font-size:17px;margin:18px 4px 10px">Спорные отметки</h2>'+DS.map(d=>{
  const part=d.as==='part';let tx,bt='';
@@ -283,7 +287,10 @@ const DICT={
 'Вы записаны':'You are signed up','Набрались. Погнали!':'Full. Let\u2019s go!','Запись отменена':'Signup cancelled',
 'Новое занятие':'New activity','Фото события (обязательно)':'Event photo (required)','Название':'Title',
 'Категория':'Category','Когда':'When','Время':'Time','Место':'Place','Сколько человек':'How many people',
-'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Язык общения на событии':'Language spoken at the event','Русский':'Russian','Для всех':'Everyone','Ходок и выше':'Regular and above','Только Создатели':'Hosts only','Новичок':'Newcomer','Ходок':'Regular','Создатель':'Host','Создатель ⭐':'Host ⭐','Ваш статус':'Your status',
+'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Событие отклонено модерацией':'Event rejected by moderation','Ваш аккаунт заблокирован':'Your account is banned','Чат доступен участникам':'Chat is for participants','Чат закрыт':'Chat closed','Аккаунт заблокирован навсегда':'Account banned permanently',
+'Дананг — город между морем и горами во Вьетнаме, где можно утром сёрфить на пляже Ми Кхе, днём гулять по набережной реки Хан, а вечером ехать на Сон Тра смотреть закат.':'Da Nang is a city between the sea and the mountains in Vietnam: surf at My Khe in the morning, walk the Han River embankment by day, watch the sunset on Son Tra in the evening.',
+'≈ 3 млн жителей':'\u2248 3 million residents',
+'Реклама, ссылки, контакты и мат запрещены. За рекламу интим-услуг и наркотиков блокировка навсегда. До 5 сообщений в минуту.':'Advertising, links, contacts and profanity are not allowed. Advertising adult services or drugs means a permanent ban. Up to 5 messages per minute.','Язык общения на событии':'Language spoken at the event','Русский':'Russian','Для всех':'Everyone','Ходок и выше':'Regular and above','Только Создатели':'Hosts only','Новичок':'Newcomer','Ходок':'Regular','Создатель':'Host','Создатель ⭐':'Host ⭐','Ваш статус':'Your status',
 'Вы только пришли. Статус выдаётся сразу при входе.':'You have just arrived. This status is given right away.',
 'Вы приходите на события. Сходите на 3 события, и организатор отметит, что вы пришли.':'You show up to events. Go to 3 events and the organizer marks that you came.',
 'Вы сами собираете людей. Станьте Ходоком, создайте событие и проведите его так, чтобы пришёл хотя бы один человек.':'You gather people yourself. Become a Regular, create an event and hold it so that at least one person comes.',
@@ -337,7 +344,10 @@ const DICT={
 'Ищем четвёртого на падел сегодня!':'Looking for a 4th player for padel today!',
 'Супер!':'Great!','Отлично, буду':'Awesome, I\u2019ll be there','Принято':'Got it','Ок, до встречи':'Ok, see you'
 };
+const RSN={'реклама интим-услуг':'advertising adult services','реклама наркотиков':'advertising drugs','реклама':'advertising','ссылки':'links','телефоны и контакты':'phone numbers and contacts','КАПС':'ALL CAPS','мат':'profanity','повторяющиеся сообщения':'repeated messages','нарушение правил':'rule violation'};
 const PAT=[
+[/^Аккаунт заблокирован навсегда\. Причина: (.+)\. Решение проверяет модератор\.$/,function(m,a){return 'Account banned permanently. Reason: '+(RSN[a]||a)+'. A moderator reviews the decision.'}],
+[/^Чат закрыт до (\d\d:\d\d), осталось (\d+) мин\. Причина: (.+)\.$/,function(m,a,b,c){return 'Chat closed until '+a+', '+b+' min left. Reason: '+(RSN[c]||c)+'.'}],
 [/^(\d+) из (\d+)$/,'$1 of $2'],
 [/^~([\d ]+) ₫ на месте$/,'~$1 \u20ab on site'],
 [/^Нужен статус: (.+)$/,function(m,a){return 'Status required: '+tr(a)}],
@@ -406,7 +416,7 @@ function showErr(m){let b=document.getElementById('errbox');
  b.textContent=m+'  (нажмите, чтобы скрыть)'}
 window.addEventListener('error',e=>showErr('JS: '+e.message));
 window.addEventListener('unhandledrejection',e=>showErr('JS: '+((e.reason&&e.reason.message)||e.reason)));
-const FRIENDLY={'level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
+const FRIENDLY={'account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
 function dbErr(e){const m=(e&&e.message)||JSON.stringify(e);
  for(const k in FRIENDLY){if(m.includes(k)){toast(FRIENDLY[k]);return}}
  showErr('База: '+m)}
@@ -434,6 +444,7 @@ async function refresh(quiet){
    sb.from('signups').select('event_id,user_id,status,profiles(name)')]);
   for(const x of [pr,ev,su])if(x.error)throw x.error;
   ME.rel=+pr.data.rel;ME.created=pr.data.created_events;ME.visits=pr.data.visits||0;ME.hosted=pr.data.hosted||0;
+  MOD.forever=!!pr.data.banned_forever;MOD.until=pr.data.chat_banned_until?Date.parse(pr.data.chat_banned_until):0;MOD.why=pr.data.ban_reason||'';MOD.strikes=pr.data.strikes||0;paintBan();
   const by={};su.data.forEach(s=>{(by[s.event_id]=by[s.event_id]||[]).push(s)});
   ME.going=[];STARS.length=0;
   EV=ev.data.map(r=>{
@@ -463,6 +474,7 @@ create=async function(){
  try{const r=await sb.rpc('create_event',{p_title:v('f_t'),p_cat:v('f_c'),p_day:DAYC[v('f_d')],p_time:v('f_h')||'19:00',
    p_place:v('f_p'),p_need:n,p_price:Math.max(0,+v('f_r')||0),p_min:+v('f_m'),p_bring:v('f_b'),p_has:v('f_h2'),p_photo:PH,p_lang:v('f_l')});
   if(r.error)throw r.error;
+  if(r.data===0){await refresh();render();toast('Событие отклонено модерацией');return}
   PH=null;await refresh();S.cat='all';go('feed');toast('Опубликовано. Ждём ещё '+(n-1))}catch(e){dbErr(e)}};
 
 /* organizer: mark attendance */
@@ -483,21 +495,20 @@ conf=async function(id){const e=EV.find(x=>x.id===id),m=LA[id]||{};
 /* chats */
 async function loadMsgs(k){
  if(!ONLINE)return;
- try{const r=await sb.from('messages').select('body,user_id,created_at,profiles(name)').eq('scope',k).order('created_at',{ascending:true}).limit(100);
+ try{const r=await sb.from('messages').select('body,body_en,kind,user_id,created_at,profiles(name)').eq('scope',k).order('created_at',{ascending:true}).limit(100);
   if(r.error)throw r.error;
-  const arr=r.data.map(m=>({u:(m.profiles&&m.profiles.name)||'?',t:m.body,me:m.user_id===UID})),old=CH[k]||[];
+  const arr=r.data.map(m=>({u:(m.profiles&&m.profiles.name)||'?',t:(LANG==='en'&&m.body_en)?m.body_en:m.body,me:m.user_id===UID,bot:m.kind==='bot'})),old=CH[k]||[];
   if(arr.length!==old.length||(arr.length&&arr[arr.length-1].t!==old[old.length-1].t)){CH[k]=arr;paintMsgs(k)}
  }catch(e){}}
 function pollMsgs(){document.querySelectorAll('.msgs').forEach(m=>loadMsgs(m.id.slice(2)))}
 setInterval(()=>{if(!document.hidden)pollMsgs()},4000);
-send=async function(k){const i=$('#i_'+k),t=i.value.trim();if(!t)return;const now=Date.now();
+send=async function(k){const i=$('#i_'+k),t=i.value.trim();if(!t)return;
  if(banned()){paintBan();return}
- const v=bad(t);
- if(v){MOD.strikes++;const h=HRS[Math.min(MOD.strikes-1,3)];MOD.until=now+h*36e5;MOD.why=v;i.value='';paintBan();toast('Чат закрыт на '+h+' ч');return}
- MOD.ts=MOD.ts.filter(x=>now-x<6e4);
- if(MOD.ts.length>=5){toast('Не больше 5 сообщений в минуту. Подождите немного');return}
- MOD.ts.push(now);MOD.last=[...MOD.last.slice(-4),t.toLowerCase()];
- try{const r=await sb.rpc('send_message',{p_scope:k,p_body:t});if(r.error)throw r.error;i.value='';await loadMsgs(k)}catch(e){dbErr(e)}};
+ try{const r=await sb.rpc('send_message',{p_scope:k,p_body:t});if(r.error)throw r.error;const d=r.data||{};
+  if(d.status==='ok'){i.value='';await loadMsgs(k);return}
+  if(d.status==='rate'){toast('Не больше 5 сообщений в минуту. Подождите немного');return}
+  if(d.status==='blocked'||d.status==='banned'){i.value='';MOD.forever=!!d.forever;MOD.until=d.until?Date.parse(d.until):0;MOD.why=d.reason||'';if(d.status==='blocked')MOD.strikes++;paintBan();await loadMsgs('city');toast(d.forever?'Ваш аккаунт заблокирован':'Чат закрыт')}
+ }catch(e){dbErr(e)}};
 
 /* wrappers */
 const _render=render;
