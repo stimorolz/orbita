@@ -66,6 +66,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .m.me{align-self:flex-end;background:var(--acc);color:var(--on)}.m.me b{color:inherit;opacity:.8}
 .cin{display:flex;gap:8px;margin-top:8px}.cin .btn{flex:none;width:auto;margin:0;padding:12px 16px}
 .ban{background:rgba(255,84,112,.14);color:var(--hot);border-radius:12px;padding:10px;margin-top:8px;font-size:14px}
+.lb{display:inline-block;font:600 11px Onest,sans-serif;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--ink);vertical-align:middle;margin-left:6px}.lb.en{background:var(--acc);color:var(--on)}
 .ph{height:130px;border-radius:12px;background:var(--line) center/cover;display:flex;align-items:center;justify-content:center;font-size:44px;margin-bottom:10px}
 .ph:not([style]){background:linear-gradient(135deg,var(--acc),var(--hot))}
 .cr{display:flex;gap:12px;margin-top:10px}
@@ -84,7 +85,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <div id="toast"></div>
 <div id="gate"></div>
 <script>
-const CATS={all:'Всё',sport:'Спорт',hike:'Походы',dance:'Танцы',food:'Костёр и еда',chill:'Кино и игры'};
+const CATS={all:'Всё',sport:'Спорт',wellness:'Здоровье и йога',food:'Гастрономия',outdoors:'Природа и походы',trips:'Поездки',games:'Настолки и игры',meet:'Знакомства',business:'Бизнес и нетворкинг',party:'Музыка и вечеринки',culture:'Культура и творчество',learn:'Языки и обучение',family:'Семья и дети',volunteer:'Волонтёрство'};
 let EV=[];
 const ME={rel:3.5,going:[],log:[],name:'',created:0,visits:0,hosted:0};
 let S={tab:'feed',cat:'all'},tt,nid=10,PH=null;
@@ -92,12 +93,13 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const f1=n=>(Math.round(n*10)/10).toString().replace('.',',');
 const RANK=['Новичок','Ходок','Создатель'];
+const lb=e=>`<span class="lb ${e.lang==='en'?'en':''}">${e.lang==='en'?'International':'RU'}</span>`;
 function myRank(){return ME.hosted>=1&&ME.visits>=3?2:ME.visits>=3?1:0}
 const STARS=['Лена','Артём','Мария'],cap=()=>ME.created?5:4.4;
 const OVR={},DS=[];
 const isStar=n=>(OVR[n]||0)<3&&(STARS.includes(n)||(n===(ME.name||'Вы')&&myRank()===2));
 const nm=n=>esc(n)+(isStar(n)?' ⭐':'');
-const EMO={sport:'⚽',hike:'🥾',dance:'💃',food:'🔥',chill:'🎬'};
+const EMO={sport:'⚽',wellness:'🧘',food:'🍽️',outdoors:'🥾',trips:'🚐',games:'🎲',meet:'🤝',business:'💼',party:'🎶',culture:'🎨',learn:'📚',family:'👨‍👩‍👧',volunteer:'💚'};
 const ph=e=>e.img?`<div class="ph" style="background-image:url(${e.img})"></div>`:`<div class="ph">${EMO[e.c]||'✨'}</div>`;
 const money=e=>e.price?`~${e.price.toLocaleString('en-US').replace(/,/g,' ')} ₫ на месте`:'Бесплатно';
 function pickPhoto(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);PH=c.toDataURL('image/jpeg',.7);toast('Фото добавлено')};im.src=r.result};r.readAsDataURL(f)}
@@ -111,7 +113,7 @@ function feed(){
  const list=EV.filter(e=>!e.done&&(S.cat==='all'||e.c===S.cat));
  const cards=list.map(e=>{const full=e.j>=e.need,go=ME.going.includes(e.id);
  return `<div class="card" onclick="openE(${e.id})">${ph(e)}<div class="cr"><div class="time ${e.d==='Сегодня'?'today':''}"><b>${esc(e.h)}</b><span>${esc(e.d)}</span></div>
- <div class="info"><h3>${esc(e.t)}</h3><div class="muted">${esc(e.p)}</div>
+ <div class="info"><h3>${esc(e.t)}${lb(e)}</h3><div class="muted">${esc(e.p)}</div>
  <div class="bar"><i style="width:${Math.min(100,e.j/e.need*100)}%"></i></div>
  <div class="row"><span class="${full?'tag':''}">${full?'Набрались, погнали':e.j+' из '+e.need}</span><span class="tag">${go?'вы идёте':''}</span></div>
  <div class="muted" style="margin-top:3px">${money(e)}</div></div></div></div>`}).join('');
@@ -125,7 +127,7 @@ function openE(id){
  else if(low)b=`<button class="btn" disabled>Нужен статус: ${RANK[e.min]}</button>`;
  else b=`<button class="btn" onclick="join(${id})">Записаться</button><p class="muted">${esc(money(e))}. Скидываетесь организатору напрямую.</p>`;
  const chat=e.mine||go?`<h2 style="font-size:17px;margin:18px 0 8px">Чат участников</h2>${chatBox('e'+id)}`:'<p class="muted" style="margin-top:14px">Чат участников откроется после записи.</p>';
- $('#sc').innerHTML=`${ph(e)}<h2>${esc(e.t)}</h2><p class="muted">${esc(e.d)}, ${esc(e.h)} · ${esc(e.p)}</p>
+ $('#sc').innerHTML=`${ph(e)}<h2>${esc(e.t)}</h2><p class="muted">${lb(e)} ${esc(e.d)}, ${esc(e.h)} · ${esc(e.p)}</p>
  <p class="muted">Организатор: <b>${e.mine?'вы':nm(e.org)}</b></p>
  <div class="bar"><i style="width:${Math.min(100,e.j/e.need*100)}%"></i></div><p><b>${e.j} из ${e.need}</b> · осталось мест: ${Math.max(0,e.need-e.j)}</p>
  <label>Возьмите с собой</label><div>${esc(e.bring||'—')}</div><label>Есть у организатора</label><div>${esc(e.has||'—')}</div>
@@ -142,6 +144,7 @@ function form(){
  <label for="f_c">Категория</label><select id="f_c">${Object.entries(CATS).filter(([k])=>k!=='all').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
  <div class="two"><div><label for="f_d">Когда</label><select id="f_d"><option>Сегодня</option><option>Завтра</option><option>Сб</option><option>Вс</option></select></div>
  <div><label for="f_h">Время</label><input id="f_h" type="time" value="19:00"></div></div>
+ <label for="f_l">Язык общения на событии</label><select id="f_l"><option value="ru"${LANG==="ru"?" selected":""}>Русский</option><option value="en"${LANG==="en"?" selected":""}>International (English)</option></select>
  <label for="f_p">Место</label><input id="f_p" placeholder="Куда приходить">
  <div class="two"><div><label for="f_n">Сколько человек</label><input id="f_n" type="number" min="2" max="40" value="6"></div>
  <div><label for="f_r">Скидываемся, ₫</label><input id="f_r" type="number" min="0" value="0"></div></div>
@@ -268,7 +271,7 @@ try{LANG=localStorage.getItem('orbita_lang')||((navigator.language||'').startsWi
 const DICT={
 'Дананг — что затеяли сегодня':'Da Nang — what is happening today',
 'Лента':'Feed','Город':'City','Создать':'Create','Профиль':'Profile',
-'Всё':'All','Спорт':'Sport','Походы':'Hikes','Танцы':'Dance','Костёр и еда':'Fire & food','Кино и игры':'Movies & games',
+'Всё':'All','Спорт':'Sports','Здоровье и йога':'Wellness','Гастрономия':'Food','Природа и походы':'Outdoors','Поездки':'Trips','Настолки и игры':'Games','Знакомства':'Meet people','Бизнес и нетворкинг':'Business & networking','Музыка и вечеринки':'Music & nightlife','Культура и творчество':'Culture & creativity','Языки и обучение':'Languages & learning','Семья и дети':'Family & kids','Волонтёрство':'Volunteering',
 'Сегодня':'Today','Завтра':'Tomorrow','Сб':'Sat','Вс':'Sun',
 'вы идёте':'you are going','Набрались, погнали':'Full, let\u2019s go','Бесплатно':'Free',
 'Тут пока пусто. Придумайте что-нибудь сами: вкладка «Создать».':'Nothing here yet. Come up with something: use the \u201cCreate\u201d tab.',
@@ -280,7 +283,7 @@ const DICT={
 'Вы записаны':'You are signed up','Набрались. Погнали!':'Full. Let\u2019s go!','Запись отменена':'Signup cancelled',
 'Новое занятие':'New activity','Фото события (обязательно)':'Event photo (required)','Название':'Title',
 'Категория':'Category','Когда':'When','Время':'Time','Место':'Place','Сколько человек':'How many people',
-'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Для всех':'Everyone','Ходок и выше':'Regular and above','Только Создатели':'Hosts only','Новичок':'Newcomer','Ходок':'Regular','Создатель':'Host','Создатель ⭐':'Host ⭐','Ваш статус':'Your status',
+'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Язык общения на событии':'Language spoken at the event','Русский':'Russian','Для всех':'Everyone','Ходок и выше':'Regular and above','Только Создатели':'Hosts only','Новичок':'Newcomer','Ходок':'Regular','Создатель':'Host','Создатель ⭐':'Host ⭐','Ваш статус':'Your status',
 'Вы только пришли. Статус выдаётся сразу при входе.':'You have just arrived. This status is given right away.',
 'Вы приходите на события. Сходите на 3 события, и организатор отметит, что вы пришли.':'You show up to events. Go to 3 events and the organizer marks that you came.',
 'Вы сами собираете людей. Станьте Ходоком, создайте событие и проведите его так, чтобы пришёл хотя бы один человек.':'You gather people yourself. Become a Regular, create an event and hold it so that at least one person comes.',
@@ -438,7 +441,7 @@ async function refresh(quiet){
    if(my&&my.status==='going')ME.going.push(r.id);
    if(r.org_hosted>=1&&r.org_visits>=3&&!STARS.includes(r.org_name))STARS.push(r.org_name);
    const ppl=ss.filter(s=>s.user_id!==r.org&&['going','attended','noshow'].includes(s.status));
-   return{id:r.id,t:r.title,c:r.cat,d:DAYS[r.day],h:r.time,p:r.place,need:r.need,j:r.joined,price:r.price,min:+r.min_level,
+   return{id:r.id,lang:r.lang,t:r.title,c:r.cat,d:DAYS[r.day],h:r.time,p:r.place,need:r.need,j:r.joined,price:r.price,min:+r.min_level,
     org:r.org_name,bring:r.bring,has:r.has,img:r.photo,mine:r.org===UID?1:0,done:r.done,
     ppl:ppl.map(s=>(s.profiles&&s.profiles.name)||'?'),pids:ppl.map(s=>s.user_id),att:{}}});
   if(quiet&&(S.tab==='feed'||S.tab==='me')&&!$('#sheet').classList.contains('on'))render();
@@ -458,7 +461,7 @@ create=async function(){
  if(!v('f_t')||!v('f_p')){toast('Укажите название и место');return}
  const n=Math.max(2,Math.min(40,+v('f_n')||2));
  try{const r=await sb.rpc('create_event',{p_title:v('f_t'),p_cat:v('f_c'),p_day:DAYC[v('f_d')],p_time:v('f_h')||'19:00',
-   p_place:v('f_p'),p_need:n,p_price:Math.max(0,+v('f_r')||0),p_min:+v('f_m'),p_bring:v('f_b'),p_has:v('f_h2'),p_photo:PH,p_lang:LANG});
+   p_place:v('f_p'),p_need:n,p_price:Math.max(0,+v('f_r')||0),p_min:+v('f_m'),p_bring:v('f_b'),p_has:v('f_h2'),p_photo:PH,p_lang:v('f_l')});
   if(r.error)throw r.error;
   PH=null;await refresh();S.cat='all';go('feed');toast('Опубликовано. Ждём ещё '+(n-1))}catch(e){dbErr(e)}};
 
