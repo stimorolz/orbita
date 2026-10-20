@@ -86,15 +86,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <script>
 const CATS={all:'Всё',sport:'Спорт',hike:'Походы',dance:'Танцы',food:'Костёр и еда',chill:'Кино и игры'};
 let EV=[];
-const ME={rel:3.5,going:[],log:[],name:'',created:0};
+const ME={rel:3.5,going:[],log:[],name:'',created:0,visits:0,hosted:0};
 let S={tab:'feed',cat:'all'},tt,nid=10,PH=null;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const f1=n=>(Math.round(n*10)/10).toString().replace('.',',');
-const lvl=r=>r>=4.5?'Мастер-организатор':r>=3.5?'Надёжный':r>=2.5?'Иногда подводит':'Часто пропадает';
+const RANK=['Новичок','Ходок','Создатель'];
+function myRank(){return ME.hosted>=1&&ME.visits>=3?2:ME.visits>=3?1:0}
 const STARS=['Лена','Артём','Мария'],cap=()=>ME.created?5:4.4;
 const OVR={},DS=[];
-const isStar=n=>(OVR[n]||0)<3&&(STARS.includes(n)||(n===(ME.name||'Вы')&&ME.rel>=4.5));
+const isStar=n=>(OVR[n]||0)<3&&(STARS.includes(n)||(n===(ME.name||'Вы')&&myRank()===2));
 const nm=n=>esc(n)+(isStar(n)?' ⭐':'');
 const EMO={sport:'⚽',hike:'🥾',dance:'💃',food:'🔥',chill:'🎬'};
 const ph=e=>e.img?`<div class="ph" style="background-image:url(${e.img})"></div>`:`<div class="ph">${EMO[e.c]||'✨'}</div>`;
@@ -116,12 +117,12 @@ function feed(){
  <div class="muted" style="margin-top:3px">${money(e)}</div></div></div></div>`}).join('');
  return `<div class="chips">${chips}</div>${cards||'<div class="empty">Тут пока пусто. Придумайте что-нибудь сами: вкладка «Создать».</div>'}`}
 function openE(id){
- const e=EV.find(x=>x.id===id),go=ME.going.includes(id),full=e.j>=e.need,low=ME.rel<e.min;
+ const e=EV.find(x=>x.id===id),go=ME.going.includes(id),full=e.j>=e.need,low=myRank()<e.min;
  let b;
  if(e.mine)b=mineBox(e);
  else if(go)b=`<button class="btn alt" onclick="leave(${id})">Отменить запись</button><p class="muted">Отмена в день события снижает уровень на 0,3.</p>`;
  else if(full)b='<button class="btn" disabled>Мест нет</button>';
- else if(low)b=`<button class="btn" disabled>Нужен уровень от ${f1(e.min)}</button>`;
+ else if(low)b=`<button class="btn" disabled>Нужен статус: ${RANK[e.min]}</button>`;
  else b=`<button class="btn" onclick="join(${id})">Записаться</button><p class="muted">${esc(money(e))}. Скидываетесь организатору напрямую.</p>`;
  const chat=e.mine||go?`<h2 style="font-size:17px;margin:18px 0 8px">Чат участников</h2>${chatBox('e'+id)}`:'<p class="muted" style="margin-top:14px">Чат участников откроется после записи.</p>';
  $('#sc').innerHTML=`${ph(e)}<h2>${esc(e.t)}</h2><p class="muted">${esc(e.d)}, ${esc(e.h)} · ${esc(e.p)}</p>
@@ -144,7 +145,7 @@ function form(){
  <label for="f_p">Место</label><input id="f_p" placeholder="Куда приходить">
  <div class="two"><div><label for="f_n">Сколько человек</label><input id="f_n" type="number" min="2" max="40" value="6"></div>
  <div><label for="f_r">Скидываемся, ₫</label><input id="f_r" type="number" min="0" value="0"></div></div>
- <label for="f_m">Минимальный уровень</label><select id="f_m"><option value="0">Любая</option><option value="3">от 3</option><option value="4">от 4</option><option value="4.5">от 4,5</option></select>
+ <label for="f_m">Для кого событие</label><select id="f_m"><option value="0">Для всех</option><option value="1">Ходок и выше</option><option value="2">Только Создатели</option></select>
  <label for="f_b">Что взять участникам</label><input id="f_b" placeholder="Воду, удобную обувь">
  <label for="f_h2">Что есть у вас (на что скидываемся)</label><input id="f_h2" placeholder="Палки, сидушки, мангал">
  <div style="margin-top:18px"><button class="btn" onclick="create()">Опубликовать</button></div></div>`}
@@ -160,15 +161,21 @@ function mark(id,ok){
  ME.rel=ok?Math.min(cap(),ME.rel+.2):Math.max(1,ME.rel-.5);
  ME.log.unshift((ok?'Пришли: ':'Не пришли: ')+e.t);
  if(!ok)DS.push({k:nid++,t:e.t,org:e.org,as:'part',st:'marked'});
- render();toast(ok?'Уровень +0,2':'Уровень −0,5')}
+ render();toast(ok?'Посещение засчитано':'Пропуск отмечен')}
 function me(){
  const own=EV.filter(e=>e.mine&&!e.done).map(e=>`<div class="panel"><b>${esc(e.t)}</b><div class="muted">${esc(e.d)}, ${esc(e.h)} · участников: ${e.ppl.length}</div>
  <button class="btn sm" style="margin-top:10px" onclick="finish(${e.id});$('#sheet').classList.add('on')">Событие прошло: отметить участников</button></div>`).join('');
  const g=ME.going.map(id=>EV.find(x=>x.id===id)).filter(e=>e&&!e.mine).map(e=>`<div class="panel"><b>${esc(e.t)}</b><div class="muted">${esc(e.d)}, ${esc(e.h)}</div>
  <div class="two" style="margin-top:10px"><button class="btn sm" onclick="mark(${e.id},true)">Демо: пришёл</button><button class="btn sm alt" onclick="mark(${e.id},false)">Демо: не пришёл</button></div></div>`).join('');
- return `<div class="panel"><div class="muted">${ME.name?nm(ME.name):'Ваш уровень'}</div><div class="big">${f1(ME.rel)}</div>
- <div class="stars"><i style="width:${ME.rel/5*100}%"></i></div><div>${lvl(ME.rel)}</div>
- <p class="muted">Считается только по посещаемости: пришли +0,2, записались и пропали −0,5, отмена в день события −0,3. Потолок для обычных участников 4,4; уровни 4,5–5 только у тех, кто создал событие.</p></div>
+ return `<div class="panel"><div class="muted">${ME.name?nm(ME.name):'Ваш статус'}</div><div class="big" style="font-size:36px">${RANK[myRank()]}</div>
+ <div class="stars"><i style="width:${[Math.min(100,ME.visits/3*100),66,100][myRank()]}%"></i></div>
+ <div>${myRank()===0?'До «Ходока» осталось '+(3-ME.visits)+' '+(3-ME.visits===1?'посещение':'посещения'):myRank()===1?'Чтобы стать Создателем, создайте событие и проведите его':'Вы Создатель: людям можно доверять'}</div>
+ ${ME.rel<2.5?'<div class="ban">Часто пропадает: много пропусков</div>':''}</div>
+ <div class="panel"><b>Как это работает</b>
+ <p class="muted" style="margin:8px 0 4px"><b>Новичок</b></p><div class="muted">Вы только пришли. Статус выдаётся сразу при входе.</div>
+ <p class="muted" style="margin:10px 0 4px"><b>Ходок</b></p><div class="muted">Вы приходите на события. Сходите на 3 события, и организатор отметит, что вы пришли.</div>
+ <p class="muted" style="margin:10px 0 4px"><b>Создатель ⭐</b></p><div class="muted">Вы сами собираете людей. Станьте Ходоком, создайте событие и проведите его так, чтобы пришёл хотя бы один человек.</div>
+ <p class="muted" style="margin:12px 0 0">Если записаться и не прийти или отменить запись в день события, статус страдает.</p></div>
  <div class="panel"><b>Чат</b><p class="muted" style="margin:6px 0 10px">${chatStatus()}</p><button class="btn sm" onclick="resetMod()">Демо: снять ограничения</button></div>
  ${dsHTML()}
  <div class="panel"><button class="btn sm" onclick="terms()">Условия участия</button></div>
@@ -236,7 +243,7 @@ function att(id,i,v){const e=EV.find(x=>x.id===id);e.att[e.ppl[i]]=v;finish(id)}
 function conf(id){const e=EV.find(x=>x.id===id),n=e.ppl.filter(x=>e.att[x]===1).length;e.done=1;
  e.ppl.filter(x=>e.att[x]===0).forEach(w=>DS.push({k:nid++,t:e.t,who:w,as:'org',st:'open'}));
  if(n)ME.rel=Math.min(cap(),ME.rel+.2);
- ME.log.unshift('Провели «'+e.t+'»: пришли '+n+' из '+e.ppl.length);closeS();render();toast(n?'Организатору +0,2':'Никто не пришёл')}
+ ME.log.unshift('Провели «'+e.t+'»: пришли '+n+' из '+e.ppl.length);closeS();render();toast(n?'Событие проведено':'Никто не пришёл')}
 /* terms + gate */
 const TERMS=`<div class="terms"><ol>
 <li>«Orbita» это только площадка, где люди находят компанию. Приложение не организует занятия и не отвечает за них.</li>
@@ -273,7 +280,15 @@ const DICT={
 'Вы записаны':'You are signed up','Набрались. Погнали!':'Full. Let\u2019s go!','Запись отменена':'Signup cancelled',
 'Новое занятие':'New activity','Фото события (обязательно)':'Event photo (required)','Название':'Title',
 'Категория':'Category','Когда':'When','Время':'Time','Место':'Place','Сколько человек':'How many people',
-'Скидываемся, ₫':'Chip in, ₫','Минимальный уровень':'Minimum level','Любая':'Any','от 3':'from 3','от 4':'from 4','от 4,5':'from 4.5',
+'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Для всех':'Everyone','Ходок и выше':'Regular and above','Только Создатели':'Hosts only','Новичок':'Newcomer','Ходок':'Regular','Создатель':'Host','Создатель ⭐':'Host ⭐','Ваш статус':'Your status',
+'Вы только пришли. Статус выдаётся сразу при входе.':'You have just arrived. This status is given right away.',
+'Вы приходите на события. Сходите на 3 события, и организатор отметит, что вы пришли.':'You show up to events. Go to 3 events and the organizer marks that you came.',
+'Вы сами собираете людей. Станьте Ходоком, создайте событие и проведите его так, чтобы пришёл хотя бы один человек.':'You gather people yourself. Become a Regular, create an event and hold it so that at least one person comes.',
+'Если записаться и не прийти или отменить запись в день события, статус страдает.':'If you sign up and do not come, or cancel on the day of the event, your status suffers.',
+'Как это работает':'How it works','Часто пропадает: много пропусков':'Often no-show: many missed events',
+'Чтобы стать Создателем, создайте событие и проведите его':'To become a Host, create an event and hold it',
+'Вы Создатель: людям можно доверять':'You are a Host: people can rely on you',
+'Посещение засчитано':'Attendance counted','Пропуск отмечен':'No-show marked','Событие проведено':'Event completed','Нужен более высокий статус':'A higher status is required',
 'Что взять участникам':'What participants bring','Что есть у вас (на что скидываемся)':'What you provide (what we chip in for)',
 'Опубликовать':'Publish','Добавьте фото события':'Add an event photo','Укажите название и место':'Enter a title and place',
 'Фото добавлено':'Photo added',
@@ -301,7 +316,7 @@ const DICT={
 'Прежде чем начать':'Before you start',
 'Принимаю условия участия':'I accept the terms of participation','Мне есть 18 лет':'I am 18 or older','Войти':'Enter',
 'Найди, с кем пойти, поехать или сыграть сегодня':'Find someone to go, ride or play with today',
-'Организатору +0,2':'Organizer +0.2','Никто не пришёл':'Nobody came',
+'Событие проведено':'Organizer +0.2','Никто не пришёл':'Nobody came',
 'Уровень +0,2':'Level +0.2','Уровень −0,5':'Level \u22120.5','Опубликовано':'Published',
 'Падел 2×2':'Padel 2\u00d72','Футбол 5×5':'Football 5\u00d75',
 'Поход на гору Сон Тра':'Hike up Son Tra','Бачата для новичков':'Bachata for beginners',
@@ -322,7 +337,8 @@ const DICT={
 const PAT=[
 [/^(\d+) из (\d+)$/,'$1 of $2'],
 [/^~([\d ]+) ₫ на месте$/,'~$1 \u20ab on site'],
-[/^Нужен уровень от (.+)$/,'Level $1+ required'],
+[/^Нужен статус: (.+)$/,function(m,a){return 'Status required: '+tr(a)}],
+[/^До «Ходока» осталось (\d+) (посещение|посещения)$/,'Visits left to become a Regular: $1'],
 [/^(.+)\. Скидываетесь организатору напрямую\.$/,function(m,a){return tr(a)+'. You chip in to the organizer directly.'}],
 [/^(\d+) из (\d+) · осталось мест: (\d+)$/,'$1 of $2 \u00b7 spots left: $3'],
 [/^Чат открыт\. Нарушений: (\d+)$/,'Chat is open. Violations: $1'],
@@ -387,7 +403,7 @@ function showErr(m){let b=document.getElementById('errbox');
  b.textContent=m+'  (нажмите, чтобы скрыть)'}
 window.addEventListener('error',e=>showErr('JS: '+e.message));
 window.addEventListener('unhandledrejection',e=>showErr('JS: '+((e.reason&&e.reason.message)||e.reason)));
-const FRIENDLY={'level too low':'Ваш уровень ниже нужного','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
+const FRIENDLY={'level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
 function dbErr(e){const m=(e&&e.message)||JSON.stringify(e);
  for(const k in FRIENDLY){if(m.includes(k)){toast(FRIENDLY[k]);return}}
  showErr('База: '+m)}
@@ -414,13 +430,13 @@ async function refresh(quiet){
    sb.from('events_feed').select('*').order('created_at',{ascending:false}),
    sb.from('signups').select('event_id,user_id,status,profiles(name)')]);
   for(const x of [pr,ev,su])if(x.error)throw x.error;
-  ME.rel=+pr.data.rel;ME.created=pr.data.created_events;
+  ME.rel=+pr.data.rel;ME.created=pr.data.created_events;ME.visits=pr.data.visits||0;ME.hosted=pr.data.hosted||0;
   const by={};su.data.forEach(s=>{(by[s.event_id]=by[s.event_id]||[]).push(s)});
   ME.going=[];STARS.length=0;
   EV=ev.data.map(r=>{
    const ss=by[r.id]||[],my=ss.find(s=>s.user_id===UID);
    if(my&&my.status==='going')ME.going.push(r.id);
-   if(r.org_rel>=4.5&&!STARS.includes(r.org_name))STARS.push(r.org_name);
+   if(r.org_hosted>=1&&r.org_visits>=3&&!STARS.includes(r.org_name))STARS.push(r.org_name);
    const ppl=ss.filter(s=>s.user_id!==r.org&&['going','attended','noshow'].includes(s.status));
    return{id:r.id,t:r.title,c:r.cat,d:DAYS[r.day],h:r.time,p:r.place,need:r.need,j:r.joined,price:r.price,min:+r.min_level,
     org:r.org_name,bring:r.bring,has:r.has,img:r.photo,mine:r.org===UID?1:0,done:r.done,
@@ -459,7 +475,7 @@ conf=async function(id){const e=EV.find(x=>x.id===id),m=LA[id]||{};
   const f=await sb.rpc('finish_event',{p_event:id});if(f.error)throw f.error;
   const n=e.pids.filter(u=>m[u]===1).length;
   ME.log.unshift('Провели «'+e.t+'»: пришли '+n+' из '+e.pids.length);delete LA[id];
-  await refresh();closeS();render();toast(n?'Организатору +0,2':'Никто не пришёл')}catch(er){dbErr(er)}};
+  await refresh();closeS();render();toast(n?'Событие проведено':'Никто не пришёл')}catch(er){dbErr(er)}};
 
 /* chats */
 async function loadMsgs(k){
