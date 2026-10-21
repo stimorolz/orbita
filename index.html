@@ -66,6 +66,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .m.me{align-self:flex-end;background:var(--acc);color:var(--on)}.m.me b{color:inherit;opacity:.8}
 .cin{display:flex;gap:8px;margin-top:8px}.cin .btn{flex:none;width:auto;margin:0;padding:12px 16px}
 .ban{background:rgba(255,84,112,.14);color:var(--hot);border-radius:12px;padding:10px;margin-top:8px;font-size:14px}
+.av{border-radius:50%;object-fit:cover;flex:none;display:inline-block;vertical-align:middle;background:var(--line)}.av.l{display:inline-flex;align-items:center;justify-content:center;font:700 13px Onest,sans-serif;color:var(--on);background:var(--acc)}
+.m b .av{margin-right:5px}
 .cityimg{height:150px;border-radius:14px;margin-bottom:10px}.m.bot{align-self:center;background:transparent;border:1px dashed var(--line);max-width:94%;font-size:14px;color:var(--mut)}
 .lb{display:inline-block;font:600 11px Onest,sans-serif;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--ink);vertical-align:middle;margin-left:6px}.lb.en{background:var(--acc);color:var(--on)}
 .ph{height:130px;border-radius:12px;background:var(--line) center/cover;display:flex;align-items:center;justify-content:center;font-size:44px;margin-bottom:10px}
@@ -94,6 +96,17 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const f1=n=>(Math.round(n*10)/10).toString().replace('.',',');
 const RANK=['Новичок','Ходок','Создатель'];
+const AVC={};
+function av(url,name,sz){const st=`width:${sz}px;height:${sz}px`;
+ if(url)return `<img class="av" style="${st}" src="${esc(url)}" alt="" onerror="this.style.visibility='hidden'">`;
+ const l=esc(((name||'?').trim()[0]||'?').toUpperCase());
+ return `<span class="av l" style="${st};font-size:${Math.round(sz*.45)}px">${l}</span>`}
+function tgPhoto(){try{const u=window.Telegram.WebApp.initDataUnsafe.user,x=u&&u.photo_url||'';return /^https:\/\/t\.me\/i\/userpic\/[A-Za-z0-9_\/.\-]+$/.test(x)?x:''}catch(e){return''}}
+function pickAvatar(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();
+ r.onload=()=>{const im=new Image();im.onload=async()=>{const S=128,c=document.createElement('canvas');c.width=c.height=S;
+  const m=Math.min(im.width,im.height),sx=(im.width-m)/2,sy=(im.height-m)/2;c.getContext('2d').drawImage(im,sx,sy,m,m,0,0,S,S);
+  try{const rr=await sb.rpc('set_avatar',{p_avatar:c.toDataURL('image/jpeg',.7)});if(rr.error)throw rr.error;await refresh();render();toast('Фото обновлено')}catch(e){dbErr(e)}};im.src=r.result};r.readAsDataURL(f)}
+async function avatarFromTg(){try{const rr=await sb.rpc('set_avatar',{p_avatar:tgPhoto()});if(rr.error)throw rr.error;await refresh();render();toast('Фото обновлено')}catch(e){dbErr(e)}}
 const todayVN=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'});
 const dayDiff=d=>Math.round((Date.parse(d+'T00:00:00Z')-Date.parse(todayVN()+'T00:00:00Z'))/864e5);
 function dayLabel(d){const k=dayDiff(d);if(k===0)return'Сегодня';if(k===1)return'Завтра';
@@ -176,7 +189,8 @@ function me(){
  <button class="btn sm" style="margin-top:10px" onclick="finish(${e.id});$('#sheet').classList.add('on')">Событие прошло: отметить участников</button></div>`).join('');
  const g=ME.going.map(id=>EV.find(x=>x.id===id)).filter(e=>e&&!e.mine).map(e=>`<div class="panel"><b>${esc(e.t)}</b><div class="muted">${esc(e.d)}, ${esc(e.h)}</div>
  <div class="two" style="margin-top:10px"><button class="btn sm" onclick="mark(${e.id},true)">Демо: пришёл</button><button class="btn sm alt" onclick="mark(${e.id},false)">Демо: не пришёл</button></div></div>`).join('');
- return `<div class="panel"><div class="muted">${ME.name?nm(ME.name):'Ваш статус'}</div><div class="big" style="font-size:36px">${RANK[myRank()]}</div>
+ return `<div class="panel"><div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${av(ME.avatar,ME.name,64)}<div><div style="font-weight:600">${ME.name?nm(ME.name):'Ваш статус'}</div>
+ <div style="margin-top:6px"><label class="chip" style="display:inline-block;cursor:pointer;padding:6px 12px">Сменить фото<input type="file" accept="image/*" style="display:none" onchange="pickAvatar(this)"></label>${tgPhoto()?' <button class="chip" style="padding:6px 12px" onclick="avatarFromTg()">Из Telegram</button>':''}</div></div></div><div class="big" style="font-size:36px">${RANK[myRank()]}</div>
  <div class="stars"><i style="width:${[Math.min(100,ME.visits/3*100),66,100][myRank()]}%"></i></div>
  <div>${myRank()===0?'До «Ходока» осталось '+(3-ME.visits)+' '+(3-ME.visits===1?'посещение':'посещения'):myRank()===1?'Чтобы стать Создателем, создайте событие и проведите его':'Вы Создатель: людям можно доверять'}</div>
  ${ME.rel<2.5?'<div class="ban">Часто пропадает: много пропусков</div>':''}</div>
@@ -209,7 +223,7 @@ function banHTML(){if(MOD.forever)return `<div class="ban">Аккаунт заб
  if(!banned())return'';const m=Math.ceil((MOD.until-Date.now())/6e4),d=new Date(MOD.until),z=n=>String(n).padStart(2,'0');
  return `<div class="ban">Чат закрыт до ${z(d.getHours())}:${z(d.getMinutes())}, осталось ${m} мин. Причина: ${esc(MOD.why)}.</div>`}
 function chatStatus(){if(MOD.forever)return'Аккаунт заблокирован навсегда';if(banned())return'Чат закрыт. Нарушений: '+MOD.strikes;return MOD.strikes?'Чат открыт. Нарушений: '+MOD.strikes:'Чат открыт, нарушений нет'}
-function msgsHTML(k){return(CH[k]||[]).map(m=>`<div class="m ${m.me?'me':''} ${m.bot?'bot':''}"><b>${m.bot?'Orbita Bot 🤖':nm(m.u)}</b>${esc(m.t)}</div>`).join('')}
+function msgsHTML(k){return(CH[k]||[]).map(m=>`<div class="m ${m.me?'me':''} ${m.bot?'bot':''}"><b>${m.bot?'Orbita Bot 🤖':av(AVC[m.uid],m.u,20)+nm(m.u)}</b>${esc(m.t)}</div>`).join('')}
 function chatBox(k){return `<div class="msgs ${k==='city'?'tall':''}" id="m_${k}">${msgsHTML(k)}</div><div id="b_${k}"></div>
  <div class="cin"><input id="i_${k}" placeholder="Сообщение" maxlength="300" onkeydown="if(event.key==='Enter')send('${k}')"><button class="btn" onclick="send('${k}')">Отправить</button></div>`}
 function paintBan(){document.querySelectorAll('[id^="b_"]').forEach(e=>e.innerHTML=banHTML())}
@@ -292,7 +306,7 @@ const DICT={
 'Вы записаны':'You are signed up','Набрались. Погнали!':'Full. Let\u2019s go!','Запись отменена':'Signup cancelled',
 'Новое занятие':'New activity','Фото события (обязательно)':'Event photo (required)','Название':'Title',
 'Категория':'Category','Когда':'When','Время':'Time','Место':'Place','Сколько человек':'How many people',
-'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Событие отклонено модерацией':'Event rejected by moderation','Выберите дату не раньше сегодняшней':'Pick a date that is not in the past','Ваш аккаунт заблокирован':'Your account is banned','Чат доступен участникам':'Chat is for participants','Чат закрыт':'Chat closed','Аккаунт заблокирован навсегда':'Account banned permanently',
+'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Сменить фото':'Change photo','Из Telegram':'From Telegram','Фото обновлено':'Photo updated','Событие отклонено модерацией':'Event rejected by moderation','Выберите дату не раньше сегодняшней':'Pick a date that is not in the past','Ваш аккаунт заблокирован':'Your account is banned','Чат доступен участникам':'Chat is for participants','Чат закрыт':'Chat closed','Аккаунт заблокирован навсегда':'Account banned permanently',
 'Дананг — город между морем и горами во Вьетнаме, где можно утром сёрфить на пляже Ми Кхе, днём гулять по набережной реки Хан, а вечером ехать на Сон Тра смотреть закат.':'Da Nang is a city between the sea and the mountains in Vietnam: surf at My Khe in the morning, walk the Han River embankment by day, watch the sunset on Son Tra in the evening.',
 '≈ 3 млн жителей':'\u2248 3 million residents',
 'Реклама, ссылки, контакты и мат запрещены. За рекламу интим-услуг и наркотиков блокировка навсегда. До 5 сообщений в минуту.':'Advertising, links, contacts and profanity are not allowed. Advertising adult services or drugs means a permanent ban. Up to 5 messages per minute.','Язык общения на событии':'Language spoken at the event','Русский':'Russian','Для всех':'Everyone','Ходок и выше':'Regular and above','Только Создатели':'Hosts only','Новичок':'Newcomer','Ходок':'Regular','Создатель':'Host','Создатель ⭐':'Host ⭐','Ваш статус':'Your status',
@@ -424,7 +438,7 @@ function showErr(m){let b=document.getElementById('errbox');
  b.textContent=m+'  (нажмите, чтобы скрыть)'}
 window.addEventListener('error',e=>showErr('JS: '+e.message));
 window.addEventListener('unhandledrejection',e=>showErr('JS: '+((e.reason&&e.reason.message)||e.reason)));
-const FRIENDLY={'bad date':'Выберите дату не раньше сегодняшней','account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
+const FRIENDLY={'bad avatar':'Это фото не подходит','bad date':'Выберите дату не раньше сегодняшней','account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
 function dbErr(e){const m=(e&&e.message)||JSON.stringify(e);
  for(const k in FRIENDLY){if(m.includes(k)){toast(FRIENDLY[k]);return}}
  showErr('База: '+m)}
@@ -440,6 +454,7 @@ async function initDB(){
   if(!ME.name)ME.name='Гость '+UID.slice(0,4);
   await sb.from('profiles').update({name:ME.name}).eq('id',UID);
   await refresh();render();
+  if(!ME.avatar&&tgPhoto()){try{await sb.rpc('set_avatar',{p_avatar:tgPhoto()});await refresh();render()}catch(e){}}
   setInterval(()=>{if(!document.hidden)refresh(true)},8000);
  }catch(e){dbErr(e)}}
 
@@ -451,7 +466,7 @@ async function refresh(quiet){
    sb.from('events_feed').select('*').order('created_at',{ascending:false}),
    sb.from('signups').select('event_id,user_id,status,profiles(name)')]);
   for(const x of [pr,ev,su])if(x.error)throw x.error;
-  ME.rel=+pr.data.rel;ME.created=pr.data.created_events;ME.visits=pr.data.visits||0;ME.hosted=pr.data.hosted||0;
+  ME.rel=+pr.data.rel;ME.created=pr.data.created_events;ME.avatar=pr.data.avatar||'';ME.visits=pr.data.visits||0;ME.hosted=pr.data.hosted||0;
   MOD.forever=!!pr.data.banned_forever;MOD.until=pr.data.chat_banned_until?Date.parse(pr.data.chat_banned_until):0;MOD.why=pr.data.ban_reason||'';MOD.strikes=pr.data.strikes||0;paintBan();
   const by={};su.data.forEach(s=>{(by[s.event_id]=by[s.event_id]||[]).push(s)});
   ME.going=[];STARS.length=0;
@@ -506,8 +521,11 @@ async function loadMsgs(k){
  if(!ONLINE)return;
  try{const r=await sb.from('messages').select('body,body_en,kind,user_id,created_at,profiles(name)').eq('scope',k).order('created_at',{ascending:true}).limit(100);
   if(r.error)throw r.error;
-  const arr=r.data.map(m=>({u:(m.profiles&&m.profiles.name)||'?',t:(LANG==='en'&&m.body_en)?m.body_en:m.body,me:m.user_id===UID,bot:m.kind==='bot'})),old=CH[k]||[];
+  const arr=r.data.map(m=>({u:(m.profiles&&m.profiles.name)||'?',t:(LANG==='en'&&m.body_en)?m.body_en:m.body,me:m.user_id===UID,uid:m.user_id,bot:m.kind==='bot'})),old=CH[k]||[];
   if(arr.length!==old.length||(arr.length&&arr[arr.length-1].t!==old[old.length-1].t)){CH[k]=arr;paintMsgs(k)}
+  const miss=[...new Set(arr.filter(m=>m.uid&&!(m.uid in AVC)).map(m=>m.uid))];
+  if(miss.length){miss.forEach(x=>AVC[x]='');const ar=await sb.from('profiles').select('id,avatar').in('id',miss);
+   if(!ar.error&&ar.data){ar.data.forEach(x=>AVC[x.id]=x.avatar||'');paintMsgs(k)}}
  }catch(e){}}
 function pollMsgs(){document.querySelectorAll('.msgs').forEach(m=>loadMsgs(m.id.slice(2)))}
 setInterval(()=>{if(!document.hidden)pollMsgs()},4000);
