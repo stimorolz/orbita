@@ -94,6 +94,11 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const f1=n=>(Math.round(n*10)/10).toString().replace('.',',');
 const RANK=['Новичок','Ходок','Создатель'];
+const todayVN=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'});
+const dayDiff=d=>Math.round((Date.parse(d+'T00:00:00Z')-Date.parse(todayVN()+'T00:00:00Z'))/864e5);
+function dayLabel(d){const k=dayDiff(d);if(k===0)return'Сегодня';if(k===1)return'Завтра';
+ const dt=new Date(d+'T00:00:00Z');return['Вс','Пн','Вт','Ср','Чт','Пт','Сб'][dt.getUTCDay()]+' '+String(dt.getUTCDate()).padStart(2,'0')+'.'+String(dt.getUTCMonth()+1).padStart(2,'0')}
+const isPast=e=>e.date&&dayDiff(e.date)<0;
 const lb=e=>`<span class="lb ${e.lang==='en'?'en':''}">${e.lang==='en'?'International':'RU'}</span>`;
 function myRank(){return ME.hosted>=1&&ME.visits>=3?2:ME.visits>=3?1:0}
 const STARS=['Лена','Артём','Мария'],cap=()=>ME.created?5:4.4;
@@ -111,7 +116,7 @@ function render(){
  $('#app').innerHTML=S.tab==='feed'?feed():S.tab==='city'?city():S.tab==='new'?form():me();paintBan();scrollMsgs()}
 function feed(){
  const chips=Object.entries(CATS).map(([k,v])=>`<button class="chip ${S.cat===k?'on':''}" onclick="S.cat='${k}';render()">${v}</button>`).join('');
- const list=EV.filter(e=>!e.done&&(S.cat==='all'||e.c===S.cat));
+ const list=EV.filter(e=>!e.done&&!isPast(e)&&(S.cat==='all'||e.c===S.cat));
  const cards=list.map(e=>{const full=e.j>=e.need,go=ME.going.includes(e.id);
  return `<div class="card" onclick="openE(${e.id})">${ph(e)}<div class="cr"><div class="time ${e.d==='Сегодня'?'today':''}"><b>${esc(e.h)}</b><span>${esc(e.d)}</span></div>
  <div class="info"><h3>${esc(e.t)}${lb(e)}</h3><div class="muted">${esc(e.p)}</div>
@@ -143,7 +148,7 @@ function form(){
  <label for="f_f">Фото события (обязательно)</label><input id="f_f" type="file" accept="image/*" onchange="pickPhoto(this)">
  <label for="f_t">Название</label><input id="f_t" placeholder="Например: волейбол на пляже">
  <label for="f_c">Категория</label><select id="f_c">${Object.entries(CATS).filter(([k])=>k!=='all').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
- <div class="two"><div><label for="f_d">Когда</label><select id="f_d"><option>Сегодня</option><option>Завтра</option><option>Сб</option><option>Вс</option></select></div>
+ <div class="two"><div><label for="f_d">Когда</label><input id="f_d" type="date" value="${todayVN()}" min="${todayVN()}"></div>
  <div><label for="f_h">Время</label><input id="f_h" type="time" value="19:00"></div></div>
  <label for="f_l">Язык общения на событии</label><select id="f_l"><option value="ru"${LANG==="ru"?" selected":""}>Русский</option><option value="en"${LANG==="en"?" selected":""}>International (English)</option></select>
  <label for="f_p">Место</label><input id="f_p" placeholder="Куда приходить">
@@ -287,7 +292,7 @@ const DICT={
 'Вы записаны':'You are signed up','Набрались. Погнали!':'Full. Let\u2019s go!','Запись отменена':'Signup cancelled',
 'Новое занятие':'New activity','Фото события (обязательно)':'Event photo (required)','Название':'Title',
 'Категория':'Category','Когда':'When','Время':'Time','Место':'Place','Сколько человек':'How many people',
-'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Событие отклонено модерацией':'Event rejected by moderation','Ваш аккаунт заблокирован':'Your account is banned','Чат доступен участникам':'Chat is for participants','Чат закрыт':'Chat closed','Аккаунт заблокирован навсегда':'Account banned permanently',
+'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Событие отклонено модерацией':'Event rejected by moderation','Выберите дату не раньше сегодняшней':'Pick a date that is not in the past','Ваш аккаунт заблокирован':'Your account is banned','Чат доступен участникам':'Chat is for participants','Чат закрыт':'Chat closed','Аккаунт заблокирован навсегда':'Account banned permanently',
 'Дананг — город между морем и горами во Вьетнаме, где можно утром сёрфить на пляже Ми Кхе, днём гулять по набережной реки Хан, а вечером ехать на Сон Тра смотреть закат.':'Da Nang is a city between the sea and the mountains in Vietnam: surf at My Khe in the morning, walk the Han River embankment by day, watch the sunset on Son Tra in the evening.',
 '≈ 3 млн жителей':'\u2248 3 million residents',
 'Реклама, ссылки, контакты и мат запрещены. За рекламу интим-услуг и наркотиков блокировка навсегда. До 5 сообщений в минуту.':'Advertising, links, contacts and profanity are not allowed. Advertising adult services or drugs means a permanent ban. Up to 5 messages per minute.','Язык общения на событии':'Language spoken at the event','Русский':'Russian','Для всех':'Everyone','Ходок и выше':'Regular and above','Только Создатели':'Hosts only','Новичок':'Newcomer','Ходок':'Regular','Создатель':'Host','Создатель ⭐':'Host ⭐','Ваш статус':'Your status',
@@ -369,8 +374,11 @@ function tr(t){
  for(const [re,to] of PAT){if(re.test(k))return t.replace(k,k.replace(re,to))}
  const w=k.split(' · ');
  if(w.length>1){return t.replace(k,w.map(x=>tr(x)).join(' \u00b7 '))}
- const c=k.match(/^(Сегодня|Завтра|Сб|Вс), (\d\d:\d\d)$/);
- if(c)return t.replace(k,DICT[c[1]]+', '+c[2]);
+ const WD={'Пн':'Mon','Вт':'Tue','Ср':'Wed','Чт':'Thu','Пт':'Fri','Сб':'Sat','Вс':'Sun'};
+ const c=k.match(/^(Сегодня|Завтра|(?:Пн|Вт|Ср|Чт|Пт|Сб|Вс)(?: \d\d\.\d\d)?), (\d\d:\d\d)$/);
+ if(c)return t.replace(k,tr(c[1])+', '+c[2]);
+ const wd=k.match(/^(Пн|Вт|Ср|Чт|Пт|Сб|Вс) (\d\d)\.(\d\d)$/);
+ if(wd)return t.replace(k,WD[wd[1]]+' '+wd[3]+'/'+wd[2]);
  return t}
 function trTree(root){
  if(LANG!=='en'||!root)return;
@@ -416,7 +424,7 @@ function showErr(m){let b=document.getElementById('errbox');
  b.textContent=m+'  (нажмите, чтобы скрыть)'}
 window.addEventListener('error',e=>showErr('JS: '+e.message));
 window.addEventListener('unhandledrejection',e=>showErr('JS: '+((e.reason&&e.reason.message)||e.reason)));
-const FRIENDLY={'account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
+const FRIENDLY={'bad date':'Выберите дату не раньше сегодняшней','account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
 function dbErr(e){const m=(e&&e.message)||JSON.stringify(e);
  for(const k in FRIENDLY){if(m.includes(k)){toast(FRIENDLY[k]);return}}
  showErr('База: '+m)}
@@ -452,7 +460,7 @@ async function refresh(quiet){
    if(my&&my.status==='going')ME.going.push(r.id);
    if(r.org_hosted>=1&&r.org_visits>=3&&!STARS.includes(r.org_name))STARS.push(r.org_name);
    const ppl=ss.filter(s=>s.user_id!==r.org&&['going','attended','noshow'].includes(s.status));
-   return{id:r.id,lang:r.lang,t:r.title,c:r.cat,d:DAYS[r.day],h:r.time,p:r.place,need:r.need,j:r.joined,price:r.price,min:+r.min_level,
+   return{id:r.id,lang:r.lang,t:r.title,c:r.cat,d:dayLabel(r.event_date),date:r.event_date,h:r.time,p:r.place,need:r.need,j:r.joined,price:r.price,min:+r.min_level,
     org:r.org_name,bring:r.bring,has:r.has,img:r.photo,mine:r.org===UID?1:0,done:r.done,
     ppl:ppl.map(s=>(s.profiles&&s.profiles.name)||'?'),pids:ppl.map(s=>s.user_id),att:{}}});
   if(quiet&&(S.tab==='feed'||S.tab==='me')&&!$('#sheet').classList.contains('on'))render();
@@ -470,8 +478,9 @@ create=async function(){
  const v=i=>$('#'+i).value.trim();
  if(!PH){toast('Добавьте фото события');return}
  if(!v('f_t')||!v('f_p')){toast('Укажите название и место');return}
+ if(!v('f_d')||v('f_d')<todayVN()){toast('Выберите дату не раньше сегодняшней');return}
  const n=Math.max(2,Math.min(40,+v('f_n')||2));
- try{const r=await sb.rpc('create_event',{p_title:v('f_t'),p_cat:v('f_c'),p_day:DAYC[v('f_d')],p_time:v('f_h')||'19:00',
+ try{const r=await sb.rpc('create_event',{p_title:v('f_t'),p_cat:v('f_c'),p_date:v('f_d'),p_time:v('f_h')||'19:00',
    p_place:v('f_p'),p_need:n,p_price:Math.max(0,+v('f_r')||0),p_min:+v('f_m'),p_bring:v('f_b'),p_has:v('f_h2'),p_photo:PH,p_lang:v('f_l')});
   if(r.error)throw r.error;
   if(r.data===0){await refresh();render();toast('Событие отклонено модерацией');return}
