@@ -68,6 +68,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .ban{background:rgba(255,84,112,.14);color:var(--hot);border-radius:12px;padding:10px;margin-top:8px;font-size:14px}
 .av{border-radius:50%;object-fit:cover;flex:none;display:inline-block;vertical-align:middle;background:var(--line)}.av.l{display:inline-flex;align-items:center;justify-content:center;font:700 13px Onest,sans-serif;color:var(--on);background:var(--acc)}
 .m b .av{margin-right:5px}
+.cnt{text-align:right;font-size:12px;color:var(--mut);margin-top:3px}textarea{resize:vertical;font:400 16px Onest,sans-serif}
+.mapbtns{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.mapbtns .chip{padding:7px 12px}
 .cityimg{height:150px;border-radius:14px;margin-bottom:10px}.m.bot{align-self:center;background:transparent;border:1px dashed var(--line);max-width:94%;font-size:14px;color:var(--mut)}
 .lb{display:inline-block;font:600 11px Onest,sans-serif;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--ink);vertical-align:middle;margin-left:6px}.lb.en{background:var(--acc);color:var(--on)}
 .ph{height:130px;border-radius:12px;background:var(--line) center/cover;display:flex;align-items:center;justify-content:center;font-size:44px;margin-bottom:10px}
@@ -96,6 +98,46 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const f1=n=>(Math.round(n*10)/10).toString().replace('.',',');
 const RANK=['Новичок','Ходок','Создатель'];
+/* ---- карта ---- */
+const inVN=(a,b)=>a>=8&&a<=24&&b>=102&&b<=110;
+function parseCoords(t){t=(t||'').trim();if(!t)return null;
+ const m=t.match(/@(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/)||t.match(/!3d(-?\d{1,3}\.\d+)!4d(-?\d{1,3}\.\d+)/)||t.match(/[?&](?:q|ll|query|center|sll)=(-?\d{1,3}\.\d+)(?:,|%2C)\s*(-?\d{1,3}\.\d+)/i)||t.match(/^\s*(-?\d{1,3}\.\d+)\s*[,; ]\s*(-?\d{1,3}\.\d+)\s*$/);
+ if(!m)return null;const a=+m[1],b=+m[2];return inVN(a,b)?[a,b]:null}
+const gmapsUrl=e=>e.lat!=null?`https://www.google.com/maps/search/?api=1&query=${e.lat},${e.lng}`:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((e.p||'')+' Da Nang')}`;
+const amapsUrl=e=>e.lat!=null?`https://maps.apple.com/?ll=${e.lat},${e.lng}&q=${encodeURIComponent(e.t||'Orbita')}`:`https://maps.apple.com/?q=${encodeURIComponent((e.p||'')+' Da Nang')}`;
+function openUrl(u){try{const w=window.Telegram&&window.Telegram.WebApp;if(w&&w.openLink){w.openLink(u);return}}catch(x){}window.open(u,'_blank','noopener')}
+function openMap(id,k){const e=EV.find(x=>x.id===id);if(e)openUrl(k==='a'?amapsUrl(e):gmapsUrl(e))}
+function copyCoords(id){const e=EV.find(x=>x.id===id);if(!e||e.lat==null)return;const t=e.lat+', '+e.lng;
+ const ok=()=>toast('Координаты скопированы');
+ const fb=()=>{const a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;opacity:0';document.body.appendChild(a);a.select();try{document.execCommand('copy');ok()}catch(x){toast(t)}a.remove()};
+ if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,fb);else fb()}
+const mapBtns=e=>`<div class="mapbtns"><button class="chip" onclick="openMap(${e.id},'g')">🗺 Google Maps</button><button class="chip" onclick="openMap(${e.id},'a')">🍎 Apple Maps</button>${e.lat!=null?`<button class="chip" onclick="copyCoords(${e.id})">📋 Координаты</button>`:''}</div>`;
+let PICK=null,PMAP=null,PMARK=null;
+function cnt(el){const c=document.getElementById('c_'+el.id);if(c)c.textContent=el.value.length+'/'+el.maxLength}
+function loadLeaflet(){return new Promise((res,rej)=>{if(window.L)return res();
+ const l=document.createElement('link');l.rel='stylesheet';l.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css';document.head.appendChild(l);
+ const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';sc.onload=res;sc.onerror=()=>rej(new Error('map'));document.head.appendChild(sc)})}
+async function toggleMap(){const w=$('#mapWrap');
+ if(w.style.display==='none'){w.style.display='block';try{await loadLeaflet();initPMap()}catch(e){$('#geoInfo').textContent='Карта не загрузилась. Вставьте ссылку или координаты.'}}else w.style.display='none'}
+function initPMap(){if(PMAP){PMAP.invalidateSize();return}
+ PMAP=L.map('pmap').setView(PICK||[16.0544,108.2022],PICK?16:12);
+ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(PMAP);
+ PMAP.on('click',ev=>setPick(ev.latlng.lat,ev.latlng.lng));if(PICK)setPick(PICK[0],PICK[1])}
+function setPick(a,b,zoom){a=+(+a).toFixed(6);b=+(+b).toFixed(6);if(!inVN(a,b)){toast('Точка должна быть во Вьетнаме');return}
+ PICK=[a,b];
+ if(PMAP){if(PMARK)PMARK.setLatLng(PICK);else PMARK=L.circleMarker(PICK,{radius:10,color:'#fff',weight:3,fillColor:'#4A3CFF',fillOpacity:1}).addTo(PMAP);if(zoom)PMAP.setView(PICK,zoom)}
+ $('#geoInfo').textContent='Точка: '+a+', '+b+'  (чтобы убрать, нажмите «Сбросить»)'}
+function clearPick(){PICK=null;if(PMARK){PMARK.remove();PMARK=null}$('#geoInfo').textContent=''}
+async function ensureMap(){const w=$('#mapWrap');if(w.style.display==='none')await toggleMap();else if(!PMAP&&window.L)initPMap()}
+async function geoGo(){const t=($('#f_geo').value||'').trim();if(!t)return;
+ const c=parseCoords(t);if(c){await ensureMap();setPick(c[0],c[1],16);return}
+ if(/^https?:\/\//i.test(t)){$('#geoInfo').textContent='Эту ссылку не удалось разобрать (короткие ссылки не подходят). Скопируйте длинную ссылку или поставьте точку на карте.';return}
+ $('#geoInfo').textContent='Ищу…';
+ try{const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=vn&q='+encodeURIComponent(t+' Da Nang'));const j=await r.json();
+  if(j&&j[0]){await ensureMap();setPick(+j[0].lat,+j[0].lon,16)}else $('#geoInfo').textContent='Ничего не нашли. Поставьте точку на карте вручную.'}
+ catch(e){$('#geoInfo').textContent='Поиск не сработал. Поставьте точку на карте вручную.'}}
+function geoMe(){if(!navigator.geolocation){toast('Не удалось определить местоположение');return}
+ navigator.geolocation.getCurrentPosition(async p=>{await ensureMap();setPick(p.coords.latitude,p.coords.longitude,16)},()=>toast('Не удалось определить местоположение'),{timeout:8000})}
 const AVC={};
 function av(url,name,sz){const st=`width:${sz}px;height:${sz}px`;
  if(url)return `<img class="av" style="${st}" src="${esc(url)}" alt="" onerror="this.style.visibility='hidden'">`;
@@ -146,7 +188,7 @@ function openE(id){
  else if(low)b=`<button class="btn" disabled>Нужен статус: ${RANK[e.min]}</button>`;
  else b=`<button class="btn" onclick="join(${id})">Записаться</button><p class="muted">${esc(money(e))}. Скидываетесь организатору напрямую.</p>`;
  const chat=e.mine||go?`<h2 style="font-size:17px;margin:18px 0 8px">Чат участников</h2>${chatBox('e'+id)}`:'<p class="muted" style="margin-top:14px">Чат участников откроется после записи.</p>';
- $('#sc').innerHTML=`${ph(e)}<h2>${esc(e.t)}</h2><p class="muted">${lb(e)} ${esc(e.d)}, ${esc(e.h)} · ${esc(e.p)}</p>
+ $('#sc').innerHTML=`${ph(e)}<h2>${esc(e.t)}</h2><p class="muted">${lb(e)} ${esc(e.d)}, ${esc(e.h)} · ${esc(e.p)}</p>${mapBtns(e)}${e.descr?`<p style="margin:8px 0">${esc(e.descr)}</p>`:''}
  <p class="muted">Организатор: <b>${e.mine?'вы':nm(e.org)}</b></p>
  <div class="bar"><i style="width:${Math.min(100,e.j/e.need*100)}%"></i></div><p><b>${e.j} из ${e.need}</b> · осталось мест: ${Math.max(0,e.need-e.j)}</p>
  <label>Возьмите с собой</label><div>${esc(e.bring||'—')}</div><label>Есть у организатора</label><div>${esc(e.has||'—')}</div>
@@ -157,19 +199,28 @@ function join(id){const e=EV.find(x=>x.id===id);e.j++;ME.going.push(id);render()
 function leave(id){const e=EV.find(x=>x.id===id);e.j--;ME.going=ME.going.filter(x=>x!==id);
  if(e.d==='Сегодня')ME.rel=Math.max(1,ME.rel-.3);closeS();render();toast('Запись отменена')}
 function form(){
+ PICK=null;PMAP=null;PMARK=null;
  return `<div class="panel"><h2 style="font-size:20px">Новое занятие</h2>
  <label for="f_f">Фото события (обязательно)</label><input id="f_f" type="file" accept="image/*" onchange="pickPhoto(this)">
- <label for="f_t">Название</label><input id="f_t" placeholder="Например: волейбол на пляже">
+ <label for="f_t">Название</label><input id="f_t" maxlength="60" oninput="cnt(this)" placeholder="Например: волейбол на пляже"><div class="cnt" id="c_f_t">0/60</div>
+ <label for="f_x">Описание (коротко и по делу)</label><textarea id="f_x" rows="3" maxlength="300" oninput="cnt(this)" placeholder="Что будем делать, для кого, важные детали"></textarea><div class="cnt" id="c_f_x">0/300</div>
  <label for="f_c">Категория</label><select id="f_c">${Object.entries(CATS).filter(([k])=>k!=='all').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
  <div class="two"><div><label for="f_d">Когда</label><input id="f_d" type="date" value="${todayVN()}" min="${todayVN()}"></div>
  <div><label for="f_h">Время</label><input id="f_h" type="time" value="19:00"></div></div>
  <label for="f_l">Язык общения на событии</label><select id="f_l"><option value="ru"${LANG==="ru"?" selected":""}>Русский</option><option value="en"${LANG==="en"?" selected":""}>International (English)</option></select>
- <label for="f_p">Место</label><input id="f_p" placeholder="Куда приходить">
+ <label for="f_p">Место</label><input id="f_p" maxlength="100" placeholder="Куда приходить">
+ <div style="margin-top:8px"><button type="button" class="chip" onclick="toggleMap()">📍 Указать точку на карте</button>
+ <div id="mapWrap" style="display:none;margin-top:10px">
+  <div class="muted" style="margin-bottom:6px">Нажмите на карту, чтобы поставить точку, или найдите место, вставьте ссылку Google/Apple Maps либо координаты.</div>
+  <div id="pmap" style="height:230px;border-radius:12px;overflow:hidden"></div>
+  <div class="cin"><input id="f_geo" placeholder="Название места, ссылка карты или координаты" onkeydown="if(event.key==='Enter')geoGo()"><button type="button" class="btn" onclick="geoGo()">Найти</button></div>
+  <div class="mapbtns"><button type="button" class="chip" onclick="geoMe()">Моё местоположение</button><button type="button" class="chip" onclick="clearPick()">Сбросить</button></div>
+  <div class="muted" id="geoInfo"></div></div></div>
  <div class="two"><div><label for="f_n">Сколько человек</label><input id="f_n" type="number" min="2" max="40" value="6"></div>
  <div><label for="f_r">Скидываемся, ₫</label><input id="f_r" type="number" min="0" value="0"></div></div>
  <label for="f_m">Для кого событие</label><select id="f_m"><option value="0">Для всех</option><option value="1">Ходок и выше</option><option value="2">Только Создатели</option></select>
- <label for="f_b">Что взять участникам</label><input id="f_b" placeholder="Воду, удобную обувь">
- <label for="f_h2">Что есть у вас (на что скидываемся)</label><input id="f_h2" placeholder="Палки, сидушки, мангал">
+ <label for="f_b">Что взять участникам</label><input id="f_b" maxlength="150" placeholder="Воду, удобную обувь">
+ <label for="f_h2">Что есть у вас (на что скидываемся)</label><input id="f_h2" maxlength="150" placeholder="Палки, сидушки, мангал">
  <div style="margin-top:18px"><button class="btn" onclick="create()">Опубликовать</button></div></div>`}
 function create(){
  const v=i=>$('#'+i).value.trim();
@@ -306,7 +357,7 @@ const DICT={
 'Вы записаны':'You are signed up','Набрались. Погнали!':'Full. Let\u2019s go!','Запись отменена':'Signup cancelled',
 'Новое занятие':'New activity','Фото события (обязательно)':'Event photo (required)','Название':'Title',
 'Категория':'Category','Когда':'When','Время':'Time','Место':'Place','Сколько человек':'How many people',
-'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Сменить фото':'Change photo','Из Telegram':'From Telegram','Фото обновлено':'Photo updated','Событие отклонено модерацией':'Event rejected by moderation','Выберите дату не раньше сегодняшней':'Pick a date that is not in the past','Ваш аккаунт заблокирован':'Your account is banned','Чат доступен участникам':'Chat is for participants','Чат закрыт':'Chat closed','Аккаунт заблокирован навсегда':'Account banned permanently',
+'Скидываемся, ₫':'Chip in, ₫','Для кого событие':'Who is it for','Описание (коротко и по делу)':'Description (short and to the point)','Что будем делать, для кого, важные детали':'What we will do, who it is for, key details','Название места, ссылка карты или координаты':'Place name, map link or coordinates','📍 Указать точку на карте':'📍 Pick a point on the map','📋 Координаты':'📋 Coordinates','Найти':'Search','Сбросить':'Reset','Моё местоположение':'My location','Координаты скопированы':'Coordinates copied','Точка должна быть во Вьетнаме':'The point must be in Vietnam','Слишком длинный текст в одном из полей':'One of the fields is too long','Точка на карте указана неверно':'The map point is invalid','Ищу…':'Searching…','Не удалось определить местоположение':'Could not detect your location','Нажмите на карту, чтобы поставить точку, или найдите место, вставьте ссылку Google/Apple Maps либо координаты.':'Tap the map to drop a point, or search for a place, paste a Google/Apple Maps link or coordinates.','Карта не загрузилась. Вставьте ссылку или координаты.':'The map did not load. Paste a link or coordinates.','Ничего не нашли. Поставьте точку на карте вручную.':'Nothing found. Place the point on the map by hand.','Поиск не сработал. Поставьте точку на карте вручную.':'Search failed. Place the point on the map by hand.','Эту ссылку не удалось разобрать (короткие ссылки не подходят). Скопируйте длинную ссылку или поставьте точку на карте.':'Could not read this link (short links do not work). Copy the long link or place the point on the map.','Сменить фото':'Change photo','Из Telegram':'From Telegram','Фото обновлено':'Photo updated','Событие отклонено модерацией':'Event rejected by moderation','Выберите дату не раньше сегодняшней':'Pick a date that is not in the past','Ваш аккаунт заблокирован':'Your account is banned','Чат доступен участникам':'Chat is for participants','Чат закрыт':'Chat closed','Аккаунт заблокирован навсегда':'Account banned permanently',
 'Дананг — город между морем и горами во Вьетнаме, где можно утром сёрфить на пляже Ми Кхе, днём гулять по набережной реки Хан, а вечером ехать на Сон Тра смотреть закат.':'Da Nang is a city between the sea and the mountains in Vietnam: surf at My Khe in the morning, walk the Han River embankment by day, watch the sunset on Son Tra in the evening.',
 '≈ 3 млн жителей':'\u2248 3 million residents',
 'Реклама, ссылки, контакты и мат запрещены. За рекламу интим-услуг и наркотиков блокировка навсегда. До 5 сообщений в минуту.':'Advertising, links, contacts and profanity are not allowed. Advertising adult services or drugs means a permanent ban. Up to 5 messages per minute.','Язык общения на событии':'Language spoken at the event','Русский':'Russian','Для всех':'Everyone','Ходок и выше':'Regular and above','Только Создатели':'Hosts only','Новичок':'Newcomer','Ходок':'Regular','Создатель':'Host','Создатель ⭐':'Host ⭐','Ваш статус':'Your status',
@@ -365,6 +416,7 @@ const DICT={
 };
 const RSN={'реклама интим-услуг':'advertising adult services','реклама наркотиков':'advertising drugs','реклама':'advertising','ссылки':'links','телефоны и контакты':'phone numbers and contacts','КАПС':'ALL CAPS','мат':'profanity','повторяющиеся сообщения':'repeated messages','нарушение правил':'rule violation'};
 const PAT=[
+[/^Точка: (.+?)  \(чтобы убрать, нажмите «Сбросить»\)$/,'Point: $1  (press "Reset" to remove)'],
 [/^Аккаунт заблокирован навсегда\. Причина: (.+)\. Решение проверяет модератор\.$/,function(m,a){return 'Account banned permanently. Reason: '+(RSN[a]||a)+'. A moderator reviews the decision.'}],
 [/^Чат закрыт до (\d\d:\d\d), осталось (\d+) мин\. Причина: (.+)\.$/,function(m,a,b,c){return 'Chat closed until '+a+', '+b+' min left. Reason: '+(RSN[c]||c)+'.'}],
 [/^(\d+) из (\d+)$/,'$1 of $2'],
@@ -438,9 +490,10 @@ function showErr(m){let b=document.getElementById('errbox');
  b.textContent=m+'  (нажмите, чтобы скрыть)'}
 window.addEventListener('error',e=>showErr('JS: '+e.message));
 window.addEventListener('unhandledrejection',e=>showErr('JS: '+((e.reason&&e.reason.message)||e.reason)));
-const FRIENDLY={'bad avatar':'Это фото не подходит','bad date':'Выберите дату не раньше сегодняшней','account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
+const FRIENDLY={'text too long':'Слишком длинный текст в одном из полей','bad coordinates':'Точка на карте указана неверно','bad avatar':'Это фото не подходит','bad date':'Выберите дату не раньше сегодняшней','account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
 function dbErr(e){const m=(e&&e.message)||JSON.stringify(e);
  for(const k in FRIENDLY){if(m.includes(k)){toast(FRIENDLY[k]);return}}
+ if(m.includes('violates check constraint')){toast('Слишком длинный текст в одном из полей');return}
  showErr('База: '+m)}
 
 async function initDB(){
@@ -476,7 +529,7 @@ async function refresh(quiet){
    if(r.org_hosted>=1&&r.org_visits>=3&&!STARS.includes(r.org_name))STARS.push(r.org_name);
    const ppl=ss.filter(s=>s.user_id!==r.org&&['going','attended','noshow'].includes(s.status));
    return{id:r.id,lang:r.lang,t:r.title,c:r.cat,d:dayLabel(r.event_date),date:r.event_date,h:r.time,p:r.place,need:r.need,j:r.joined,price:r.price,min:+r.min_level,
-    org:r.org_name,bring:r.bring,has:r.has,img:r.photo,mine:r.org===UID?1:0,done:r.done,
+    org:r.org_name,bring:r.bring,has:r.has,descr:r.descr||'',lat:r.lat,lng:r.lng,img:r.photo,mine:r.org===UID?1:0,done:r.done,
     ppl:ppl.map(s=>(s.profiles&&s.profiles.name)||'?'),pids:ppl.map(s=>s.user_id),att:{}}});
   if(quiet&&(S.tab==='feed'||S.tab==='me')&&!$('#sheet').classList.contains('on'))render();
  }catch(e){if(!quiet)dbErr(e)}}
@@ -493,10 +546,11 @@ create=async function(){
  const v=i=>$('#'+i).value.trim();
  if(!PH){toast('Добавьте фото события');return}
  if(!v('f_t')||!v('f_p')){toast('Укажите название и место');return}
+ if(v('f_t').length>60||v('f_p').length>100||v('f_x').length>300||v('f_b').length>150||v('f_h2').length>150){toast('Слишком длинный текст в одном из полей');return}
  if(!v('f_d')||v('f_d')<todayVN()){toast('Выберите дату не раньше сегодняшней');return}
  const n=Math.max(2,Math.min(40,+v('f_n')||2));
  try{const r=await sb.rpc('create_event',{p_title:v('f_t'),p_cat:v('f_c'),p_date:v('f_d'),p_time:v('f_h')||'19:00',
-   p_place:v('f_p'),p_need:n,p_price:Math.max(0,+v('f_r')||0),p_min:+v('f_m'),p_bring:v('f_b'),p_has:v('f_h2'),p_photo:PH,p_lang:v('f_l')});
+   p_place:v('f_p'),p_need:n,p_price:Math.max(0,+v('f_r')||0),p_min:+v('f_m'),p_bring:v('f_b'),p_has:v('f_h2'),p_photo:PH,p_lang:v('f_l'),p_descr:v('f_x')||null,p_lat:PICK?PICK[0]:null,p_lng:PICK?PICK[1]:null});
   if(r.error)throw r.error;
   if(r.data===0){await refresh();render();toast('Событие отклонено модерацией');return}
   PH=null;await refresh();S.cat='all';go('feed');toast('Опубликовано. Ждём ещё '+(n-1))}catch(e){dbErr(e)}};
