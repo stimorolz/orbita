@@ -488,7 +488,10 @@ function showErr(m){let b=document.getElementById('errbox');
   b.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:50;background:#FF5470;color:#fff;padding:10px 12px;border-radius:12px;font:13px/1.35 system-ui,sans-serif;word-break:break-word';
   b.onclick=()=>b.remove();document.body.appendChild(b)}
  b.textContent=m+'  (нажмите, чтобы скрыть)'}
-window.addEventListener('error',e=>showErr('JS: '+e.message));
+window.addEventListener('error',e=>{
+ /* «Script error.» без файла и строки: шум от внешних скриптов (часто блокировщики браузера), не показываем */
+ if(e.message==='Script error.'&&!e.filename){try{console.warn('Script error (cross-origin, no details)')}catch(x){}return}
+ showErr('JS: '+e.message+(e.filename?' ('+String(e.filename).split('/').pop()+':'+e.lineno+')':''))});
 window.addEventListener('unhandledrejection',e=>showErr('JS: '+((e.reason&&e.reason.message)||e.reason)));
 const FRIENDLY={'event started':'Событие уже началось, изменить нельзя','need below joined':'Мест не может быть меньше, чем уже записалось','bad photo':'Это фото не подходит','not allowed':'Нет прав на это действие','text too long':'Слишком длинный текст в одном из полей','bad coordinates':'Точка на карте указана неверно','bad avatar':'Это фото не подходит','bad date':'Выберите дату не раньше сегодняшней','account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
 function dbErr(e){const m=(e&&e.message)||JSON.stringify(e);
@@ -496,13 +499,34 @@ function dbErr(e){const m=(e&&e.message)||JSON.stringify(e);
  if(m.includes('violates check constraint')){toast('Слишком длинный текст в одном из полей');return}
  showErr('База: '+m)}
 
+/* Вход только через Telegram: сервер проверяет подпись initData и выдаёт сессию */
+function blockApp(){
+ if(document.getElementById('tgonly'))return;
+ const en=LANG==='en',d=document.createElement('div');d.id='tgonly';
+ d.style.cssText='position:fixed;inset:0;z-index:100;background:#EEF0F8;display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,sans-serif';
+ d.innerHTML='<div style="max-width:380px;text-align:center"><div style="font-size:44px;font-weight:800;color:#4338F5;margin-bottom:12px">Orbita</div>'
+  +'<p style="font-size:18px;line-height:1.4;color:#1B1F4B;margin:0 0 20px">'
+  +(en?'Orbita works only inside Telegram. Open it via our bot.':'Orbita работает только внутри Telegram. Откройте приложение через нашего бота.')
+  +'</p><a href="https://t.me/orbita_go_bot" style="display:inline-block;background:#4338F5;color:#fff;text-decoration:none;font-weight:700;font-size:17px;padding:14px 24px;border-radius:14px">'
+  +(en?'Open in Telegram':'Открыть в Telegram')+'</a></div>';
+ document.body.appendChild(d)}
+async function tgLogin(){
+ const tg=window.Telegram&&window.Telegram.WebApp,idata=tg&&tg.initData;
+ if(!idata)return null;
+ const r=await fetch(SB_URL+'/functions/v1/telegram-auth',{method:'POST',
+  headers:{'Content-Type':'application/json',apikey:SB_KEY},body:JSON.stringify({initData:idata})});
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok||!j.access_token)throw new Error('Вход через Telegram не удался: '+(j.detail||j.error||r.status));
+ const s=await sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token});
+ if(s.error)throw s.error;
+ return s.data.session}
+
 async function initDB(){
  try{
   if(!window.supabase)throw new Error('библиотека supabase-js не загрузилась (нет интернета или блокировка)');
   sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
-  let r=await sb.auth.getSession(),session=r.data&&r.data.session;
-  if(!session){const a=await sb.auth.signInAnonymously({options:{data:{name:ME.name||'Guest'}}});
-   if(a.error)throw a.error;session=a.data.session}
+  const session=await tgLogin();
+  if(!session){blockApp();try{await sb.auth.signOut()}catch(x){}return}
   UID=session.user.id;ONLINE=true;
   if(!ME.name)ME.name='Гость '+UID.slice(0,4);
   await sb.from('profiles').update({name:ME.name}).eq('id',UID);
