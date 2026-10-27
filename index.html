@@ -11,6 +11,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0E1130;--card:#1A1E48;--ink:#EEF0FF;--mut:#9A9FCB;--acc:#8F86FF;--on:#0E1130;--line:#2D3270}}
 :root[data-theme="dark"]{--bg:#0E1130;--card:#1A1E48;--ink:#EEF0FF;--mut:#9A9FCB;--acc:#8F86FF;--on:#0E1130;--line:#2D3270}
 *{box-sizing:border-box}html,body{margin:0}
+body{overflow-wrap:anywhere}.cr>*,.card>*{min-width:0}input,textarea,select{max-width:100%}.descr{white-space:pre-line;overflow-wrap:anywhere}
 body{background:var(--bg);color:var(--ink);font:400 16px/1.45 Onest,system-ui,sans-serif;padding-bottom:calc(90px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto}
 h1,h2{font-family:Unbounded,Onest,sans-serif;margin:0}
 header{padding:18px 18px 6px;position:relative}#lg{position:absolute;right:18px;top:22px;padding:6px 12px}
@@ -188,7 +189,7 @@ function openE(id){
  else if(low)b=`<button class="btn" disabled>Нужен статус: ${RANK[e.min]}</button>`;
  else b=`<button class="btn" onclick="join(${id})">Записаться</button><p class="muted">${esc(money(e))}. Скидываетесь организатору напрямую.</p>`;
  const chat=e.mine||go?`<h2 style="font-size:17px;margin:18px 0 8px">Чат участников</h2>${chatBox('e'+id)}`:'<p class="muted" style="margin-top:14px">Чат участников откроется после записи.</p>';
- $('#sc').innerHTML=`${ph(e)}<h2>${esc(e.t)}</h2><p class="muted">${lb(e)}${e.j>=e.need?'<span class="lb full">Набралось</span>':''} ${esc(e.d)}, ${esc(e.h)} · ${esc(e.p)}</p>${mapBtns(e)}${e.descr?`<p style="margin:8px 0">${esc(e.descr)}</p>`:''}
+ $('#sc').innerHTML=`${ph(e)}<h2>${esc(e.t)}</h2><p class="muted">${lb(e)}${e.j>=e.need?'<span class="lb full">Набралось</span>':''} ${esc(e.d)}, ${esc(e.h)} · ${esc(e.p)}</p>${mapBtns(e)}${e.descr?`<p class="descr" style="margin:8px 0">${esc(e.descr)}</p>`:''}
  <p class="muted">Организатор: <b>${e.mine?'вы':nm(e.org)}</b></p>
  <div class="bar"><i style="width:${Math.min(100,e.j/e.need*100)}%"></i></div><p><b>${e.j} из ${e.need}</b> · осталось мест: ${Math.max(0,e.need-e.j)}</p>
  <label>Возьмите с собой</label><div>${esc(e.bring||'—')}</div><label>Есть у организатора</label><div>${esc(e.has||'—')}</div>
@@ -577,7 +578,7 @@ create=async function(){
    p_place:v('f_p'),p_need:n,p_price:Math.max(0,+v('f_r')||0),p_min:+v('f_m'),p_bring:v('f_b'),p_has:v('f_h2'),p_photo:PH,p_lang:v('f_l'),p_descr:v('f_x')||null,p_lat:PICK?PICK[0]:null,p_lng:PICK?PICK[1]:null});
   if(r.error)throw r.error;
   if(r.data===0){await refresh();render();toast('Событие отклонено модерацией');return}
-  PH=null;await refresh();S.cat='all';go('feed');toast('Опубликовано. Ждём ещё '+(n-1))}catch(e){dbErr(e)}};
+  PH=null;draftClear();await refresh();S.cat='all';go('feed');toast('Опубликовано. Ждём ещё '+(n-1))}catch(e){dbErr(e)}};
 
 /* organizer: mark attendance */
 const canEdit=e=>!!e.date&&new Date(e.date+'T'+(e.h||'00:00')+':00+07:00')>new Date();
@@ -630,8 +631,37 @@ send=async function(k){const i=$('#i_'+k),t=i.value.trim();if(!t)return;
  }catch(e){dbErr(e)}};
 
 /* wrappers */
+/* ===== Черновик формы «Новое занятие»: сохраняется в телефоне, пока событие не опубликовано ===== */
+const DRAFT_KEY='orbita_draft_v1',DF=['f_t','f_x','f_c','f_d','f_h','f_l','f_p','f_n','f_r','f_m','f_b','f_h2'];
+let DRAFT_SKIP=false;
+function draftRead(){try{return JSON.parse(localStorage.getItem(DRAFT_KEY)||'null')}catch(e){return null}}
+function draftClear(){DRAFT_SKIP=true;try{localStorage.removeItem(DRAFT_KEY)}catch(e){}}
+function draftSave(){
+ if(DRAFT_SKIP||S.tab!=='new'||!$('#f_t'))return;
+ if(document.querySelector('#app button[onclick="save()"]'))return; /* это редактирование, не черновик */
+ const d={v:{},pick:PICK,t:Date.now()};
+ DF.forEach(i=>{const el=$('#'+i);if(el)d.v[i]=el.value});
+ try{d.ph=PH||null;localStorage.setItem(DRAFT_KEY,JSON.stringify(d))}
+ catch(e){try{delete d.ph;localStorage.setItem(DRAFT_KEY,JSON.stringify(d))}catch(x){}}}
+function draftApply(){
+ if(S.tab!=='new'||!$('#f_t'))return;
+ if(document.querySelector('#app button[onclick="save()"]'))return;
+ const d=draftRead();if(!d||!d.v||Date.now()-(d.t||0)>7*864e5)return;
+ DF.forEach(i=>{const el=$('#'+i);if(!el||d.v[i]==null)return;
+  if(i==='f_d'&&d.v[i]<todayVN())return;
+  el.value=d.v[i];if(el.maxLength>0)cnt(el)});
+ if(d.ph&&!PH)PH=d.ph;
+ if(d.pick&&!PICK&&Array.isArray(d.pick)){PICK=d.pick;const g=$('#geoInfo');if(g)g.textContent='Точка: '+d.pick[0]+', '+d.pick[1]+'  (чтобы убрать, нажмите «Сбросить»)'}
+ if(PH){const f=$('#f_f');if(f&&!$('#draftPh')){const m=document.createElement('div');m.id='draftPh';m.className='muted';m.textContent='Фото из черновика сохранено';f.insertAdjacentElement('afterend',m)}}}
+document.addEventListener('input',e=>{if(e.target&&/^f_/.test(e.target.id||''))draftSave()});
+document.addEventListener('change',e=>{if(e.target&&/^f_/.test(e.target.id||''))setTimeout(draftSave,0)});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)draftSave()});
+window.addEventListener('pagehide',draftSave);
+const _go=go;go=function(t){draftSave();_go(t)};
+const _pickPhoto=pickPhoto;pickPhoto=function(i){_pickPhoto(i);setTimeout(draftSave,800);setTimeout(draftSave,2500)};
+
 const _render=render;
-render=function(){_render();
+render=function(){_render();DRAFT_SKIP=false;draftApply();
  document.querySelectorAll('button[onclick^="mark("]').forEach(b=>{const p=b.closest('.two');if(p)p.remove()});
  pollMsgs()};
 const _openE=openE;
