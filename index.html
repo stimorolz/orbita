@@ -184,11 +184,12 @@ function openE(id){
  const e=EV.find(x=>x.id===id),go=ME.going.includes(id),full=e.j>=e.need,low=myRank()<e.min;
  let b;
  if(e.mine)b=mineBox(e);
+ else if(e.my==='attended'||e.my==='noshow'||(go&&canConfirmFrom(e)))b=attBlock(e);
  else if(go)b=`<button class="btn alt" onclick="leave(${id})">Отменить запись</button><p class="muted">Отмена в день события снижает уровень на 0,3.</p>`;
  else if(full)b='<button class="btn" disabled>Мест нет</button>';
  else if(low)b=`<button class="btn" disabled>Нужен статус: ${RANK[e.min]}</button>`;
  else b=`<button class="btn" onclick="join(${id})">Записаться</button><p class="muted">${esc(money(e))}. Скидываетесь организатору напрямую.</p>`;
- const chat=e.mine||go?`<h2 style="font-size:17px;margin:18px 0 8px">Чат участников</h2>${chatBox('e'+id)}`:'<p class="muted" style="margin-top:14px">Чат участников откроется после записи.</p>';
+ const chat=e.mine||go||e.my==='attended'?`<h2 style="font-size:17px;margin:18px 0 8px">Чат участников</h2>${chatBox('e'+id)}`:'<p class="muted" style="margin-top:14px">Чат участников откроется после записи.</p>';
  $('#sc').innerHTML=`${ph(e)}<h2>${esc(e.t)}</h2><p class="muted">${lb(e)}${e.j>=e.need?'<span class="lb full">Набралось</span>':''} ${esc(e.d)}, ${esc(e.h)} · ${esc(e.p)}</p>${mapBtns(e)}${e.descr?`<p class="descr" style="margin:8px 0">${esc(e.descr)}</p>`:''}
  <p class="muted">Организатор: <b>${e.mine?'вы':nm(e.org)}</b></p>
  <div class="bar"><i style="width:${Math.min(100,e.j/e.need*100)}%"></i></div><p><b>${e.j} из ${e.need}</b> · осталось мест: ${Math.max(0,e.need-e.j)}</p>
@@ -237,10 +238,10 @@ function mark(id,ok){
  if(!ok)DS.push({k:nid++,t:e.t,org:e.org,as:'part',st:'marked'});
  render();toast(ok?'Посещение засчитано':'Пропуск отмечен')}
 function me(){
- const own=EV.filter(e=>e.mine&&!e.done).map(e=>`<div class="panel"><b>${esc(e.t)}</b><div class="muted">${esc(e.d)}, ${esc(e.h)} · участников: ${e.ppl.length}</div>
- <button class="btn sm" style="margin-top:10px" onclick="finish(${e.id});$('#sheet').classList.add('on')">Событие прошло: отметить участников</button></div>`).join('');
- const g=ME.going.map(id=>EV.find(x=>x.id===id)).filter(e=>e&&!e.mine).map(e=>`<div class="panel"><b>${esc(e.t)}</b><div class="muted">${esc(e.d)}, ${esc(e.h)}</div>
- <div class="two" style="margin-top:10px"><button class="btn sm" onclick="mark(${e.id},true)">Демо: пришёл</button><button class="btn sm alt" onclick="mark(${e.id},false)">Демо: не пришёл</button></div></div>`).join('');
+ const own=EV.filter(e=>e.mine&&winOpen(e)).map(e=>`<div class="panel"><b>${esc(e.t)}</b><div class="muted">${esc(e.d)}, ${esc(e.h)} · участников: ${e.ppl.length}</div>
+ <button class="btn sm" style="margin-top:10px" onclick="openE(${e.id})">${canConfirmFrom(e)?'Кодовое слово и участники':'Открыть событие'}</button></div>`).join('');
+ const g=EV.filter(e=>!e.mine&&(ME.going.includes(e.id)||e.my==='attended')&&winOpen(e)).map(e=>`<div class="panel"><b>${esc(e.t)}</b><div class="muted">${esc(e.d)}, ${esc(e.h)}${e.my==='attended'?' · ✅ приход подтверждён':''}</div>
+ <button class="btn sm" style="margin-top:10px" onclick="openE(${e.id})">${e.my!=='attended'&&canConfirmFrom(e)?'Подтвердить приход':'Открыть событие'}</button></div>`).join('');
  return `<div class="panel"><div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${av(ME.avatar,ME.name,64)}<div><div style="font-weight:600">${ME.name?nm(ME.name):'Ваш статус'}</div>
  <div style="margin-top:6px"><label class="chip" style="display:inline-block;cursor:pointer;padding:6px 12px">Сменить фото<input type="file" accept="image/*" style="display:none" onchange="pickAvatar(this)"></label>${tgPhoto()?' <button class="chip" style="padding:6px 12px" onclick="avatarFromTg()">Из Telegram</button>':''}</div></div></div><div class="big" style="font-size:36px">${RANK[myRank()]}</div>
  <div class="stars"><i style="width:${[Math.min(100,ME.visits/3*100),66,100][myRank()]}%"></i></div>
@@ -255,7 +256,7 @@ function me(){
  ${dsHTML()}
  <div class="panel"><button class="btn sm" onclick="terms()">Условия участия</button></div>
  ${own?'<h2 style="font-size:17px;margin:18px 4px 8px">Мои события</h2>'+own:''}
- ${g?'<h2 style="font-size:17px;margin:18px 4px 8px">Мои записи</h2>'+g+'<p class="muted" style="margin:0 4px 14px">Приход вам отмечает организатор после события.</p>':''}
+ ${g?'<h2 style="font-size:17px;margin:18px 4px 8px">Мои записи</h2>'+g+'<p class="muted" style="margin:0 4px 14px">Приход подтверждаете вы сами: кодовым словом или фото.</p>':''}
  ${ME.log.length?'<h2 style="font-size:17px;margin:18px 4px 8px">История</h2><ul class="l">'+ME.log.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':''}`}
 /* chats + moderation */
 const CH={city:[{u:'Лена',t:'Кто завтра на Сон Тра? Осталось 3 места'},{u:'Артём',t:'Ищем четвёртого на падел сегодня!'}]};
@@ -479,7 +480,7 @@ trTree(document.body);
 
 /* ===== Orbita: Supabase data layer ===== */
 const SB_URL='https://scybfdrrwbrlazpqhpll.supabase.co',SB_KEY='sb_publishable_WP4es59btosazZ-Ly5pgbw_41Dx0cRN';
-let sb=null,UID=null,ONLINE=false;
+let sb=null,UID=null,ONLINE=false,CM=[];
 const DAYS={today:'Сегодня',tomorrow:'Завтра',sat:'Сб',sun:'Вс'},DAYC={'Сегодня':'today','Завтра':'tomorrow','Сб':'sat','Вс':'sun'};
 const LA={};
 EV=[];CH.city=[];
@@ -494,7 +495,7 @@ window.addEventListener('error',e=>{
  if(e.message==='Script error.'&&!e.filename){try{console.warn('Script error (cross-origin, no details)')}catch(x){}return}
  showErr('JS: '+e.message+(e.filename?' ('+String(e.filename).split('/').pop()+':'+e.lineno+')':''))});
 window.addEventListener('unhandledrejection',e=>showErr('JS: '+((e.reason&&e.reason.message)||e.reason)));
-const FRIENDLY={'event started':'Событие уже началось, изменить нельзя','need below joined':'Мест не может быть меньше, чем уже записалось','bad photo':'Это фото не подходит','not allowed':'Нет прав на это действие','text too long':'Слишком длинный текст в одном из полей','bad coordinates':'Точка на карте указана неверно','bad avatar':'Это фото не подходит','bad date':'Выберите дату не раньше сегодняшней','account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно'};
+const FRIENDLY={'event started':'Событие уже началось, изменить нельзя','need below joined':'Мест не может быть меньше, чем уже записалось','bad photo':'Это фото не подходит','not allowed':'Нет прав на это действие','text too long':'Слишком длинный текст в одном из полей','bad coordinates':'Точка на карте указана неверно','bad avatar':'Это фото не подходит','bad date':'Выберите дату не раньше сегодняшней','account banned':'Ваш аккаунт заблокирован','not a participant':'Чат доступен участникам','level too low':'Нужен более высокий статус','event full':'Мест нет','chat banned':'Чат закрыт','rate limit':'Не больше 5 сообщений в минуту. Подождите немного','mark all participants first':'Сначала отметьте всех участников','event not available':'Событие недоступно','not started':'Подтвердить приход можно за 30 минут до начала события','window closed':'Время для этого действия вышло','not going':'Действие недоступно: нет активной записи','already confirmed':'Приход уже подтверждён','already reported':'Жалоба уже отправлена'};
 function dbErr(e){const m=(e&&e.message)||JSON.stringify(e);
  for(const k in FRIENDLY){if(m.includes(k)){toast(FRIENDLY[k]);return}}
  if(m.includes('violates check constraint')){toast('Слишком длинный текст в одном из полей');return}
@@ -544,6 +545,7 @@ async function refresh(quiet){
    sb.from('events_feed').select('*').order('created_at',{ascending:false}),
    sb.from('signups').select('event_id,user_id,status,profiles(name)')]);
   for(const x of [pr,ev,su])if(x.error)throw x.error;
+  try{const cm=await sb.from('complaints').select('id,event_id,org,target,status,deadline,created_at').order('id',{ascending:false});CM=cm.error?[]:(cm.data||[])}catch(x){CM=[]}
   ME.rel=+pr.data.rel;ME.created=pr.data.created_events;ME.avatar=pr.data.avatar||'';ME.visits=pr.data.visits||0;ME.hosted=pr.data.hosted||0;
   MOD.forever=!!pr.data.banned_forever;MOD.until=pr.data.chat_banned_until?Date.parse(pr.data.chat_banned_until):0;MOD.why=pr.data.ban_reason||'';MOD.strikes=pr.data.strikes||0;paintBan();
   const by={};su.data.forEach(s=>{(by[s.event_id]=by[s.event_id]||[]).push(s)});
@@ -555,7 +557,7 @@ async function refresh(quiet){
    const ppl=ss.filter(s=>s.user_id!==r.org&&['going','attended','noshow'].includes(s.status));
    return{id:r.id,lang:r.lang,t:r.title,c:r.cat,d:dayLabel(r.event_date),date:r.event_date,h:r.time,p:r.place,need:r.need,j:r.joined,price:r.price,min:+r.min_level,
     org:r.org_name,bring:r.bring,has:r.has,descr:r.descr||'',lat:r.lat,lng:r.lng,img:r.photo,mine:r.org===UID?1:0,done:r.done,
-    ppl:ppl.map(s=>(s.profiles&&s.profiles.name)||'?'),pids:ppl.map(s=>s.user_id),att:{}}});
+    ppl:ppl.map(s=>(s.profiles&&s.profiles.name)||'?'),pids:ppl.map(s=>s.user_id),att:{},my:my?my.status:'',pst:Object.fromEntries(ppl.map(s=>[s.user_id,s.status]))}});
   if(quiet&&(S.tab==='feed'||S.tab==='me')&&!$('#sheet').classList.contains('on'))render();
  }catch(e){if(!quiet)dbErr(e)}}
 
@@ -608,6 +610,123 @@ conf=async function(id){const e=EV.find(x=>x.id===id),m=LA[id]||{};
   const n=e.pids.filter(u=>m[u]===1).length;
   ME.log.unshift('Провели «'+e.t+'»: пришли '+n+' из '+e.pids.length);delete LA[id];
   await refresh();closeS();render();toast(n?'Событие проведено':'Никто не пришёл')}catch(er){dbErr(er)}};
+
+
+/* ===== Подтверждение прихода (миграция 12) ===== */
+function startMs(e){return e.date?Date.parse(e.date+'T'+(e.h||'00:00')+':00+07:00'):0}
+function canConfirmFrom(e){return Date.now()>=startMs(e)-30*60000}
+function winOpen(e){return !!e.date&&Date.now()<=startMs(e)+48*3600000}
+function cmpOf(e,u){return CM.find(c=>c.event_id===e.id&&c.target===u)}
+function fmtDT(ms){return new Date(ms).toLocaleString(LANG==='en'?'en-GB':'ru-RU',{timeZone:'Asia/Ho_Chi_Minh',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}
+function askYN(msg,cb){const tg=window.Telegram&&window.Telegram.WebApp;
+ if(tg&&tg.showConfirm){try{tg.showConfirm(msg,ok=>{if(ok)cb()});return}catch(x){}}
+ if(confirm(msg))cb()}
+function attBlock(e){
+ if(e.my==='attended')return '<div class="panel"><b>✅ Вы подтвердили приход</b></div><div id="proofs"></div>';
+ if(e.my==='noshow')return '<div class="panel"><b>Отмечено: вас не было</b></div>';
+ const c=CM.find(x=>x.event_id===e.id&&x.target===UID);
+ if(c&&(c.status==='moderator'||c.status==='upheld'))return '<div class="panel">Жалоба организатора на рассмотрении у модератора.</div>';
+ let end=startMs(e)+48*36e5;
+ if(c&&c.status==='open')end=Math.max(end,Date.parse(c.deadline));
+ if(Date.now()>end)return '<p class="muted">Время подтверждения прихода вышло.</p>';
+ const warn=c&&c.status==='open'?`<div class="ban" style="margin-bottom:10px">Организатор отметил, что вас не было. Подтвердите приход до ${esc(fmtDT(end))}, иначе решит модератор.</div>`:'';
+ return `<div class="panel">${warn}<b>Вы были на событии?</b><p class="muted" style="margin:4px 0 10px">Введите кодовое слово, которое назвал организатор, или загрузите фото с события.</p>
+ <div class="cin"><input id="a_code" placeholder="Кодовое слово" autocomplete="off" autocapitalize="characters"><button type="button" class="btn" onclick="confirmCode(${e.id})">Подтвердить</button></div>
+ <label class="chip" style="display:inline-block;cursor:pointer;margin-top:10px">📷 Загрузить фото<input type="file" accept="image/*" style="display:none" onchange="confirmPhoto(${e.id},this)"></label></div><div id="proofs"></div>`}
+async function attRes(id,res){
+ if(res==='ok'){await refresh();render();openE(id);toast('Приход подтверждён. Спасибо!');return}
+ toast(res==='wrong_code'?'Неверное слово. Проверьте и попробуйте ещё раз':res==='locked'?'Слишком много попыток. Подтвердите приход фото':res==='no_code_yet'?'Организатор ещё не открыл кодовое слово':'Не получилось подтвердить')}
+async function confirmCode(id){
+ const v=(($('#a_code')||{}).value||'').trim();if(!v){toast('Введите кодовое слово');return}
+ try{const r=await sb.rpc('confirm_attendance',{p_event:id,p_code:v,p_photo:null});if(r.error)throw r.error;await attRes(id,r.data)}catch(e){dbErr(e)}}
+function confirmPhoto(id,inp){
+ const f=inp.files&&inp.files[0];if(!f)return;toast('Отправляю фото…');
+ const r=new FileReader();
+ r.onload=()=>{const im=new Image();
+  im.onload=async()=>{const k=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');
+   c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+   try{const x=await sb.rpc('confirm_attendance',{p_event:id,p_code:null,p_photo:c.toDataURL('image/jpeg',.6)});if(x.error)throw x.error;await attRes(id,x.data)}catch(e){dbErr(e)}};
+  im.onerror=()=>toast('Не удалось прочитать фото');im.src=r.result};
+ r.readAsDataURL(f)}
+function orgBox(e){
+ const rows=e.pids.map((u,i)=>{const st=e.pst&&e.pst[u],c=cmpOf(e,u);let tag,btn='';
+  if(st==='attended')tag='✅ пришёл(ла)';
+  else if(st==='noshow')tag='❌ не пришёл(ла)';
+  else if(c&&c.status==='open')tag='⏳ жалоба: ждём ответа участника';
+  else if(c&&c.status==='moderator')tag='⚖️ жалоба у модератора';
+  else if(c&&c.status==='proved')tag='✅ доказал(а) приход';
+  else{tag='не подтвердил(а)';if(Date.now()>=startMs(e)&&winOpen(e))btn=`<button class="btn sm alt" onclick="reportNo(${e.id},'${u}')">Пожаловаться: не пришёл</button>`}
+  return `<div class="panel" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b>${esc(e.ppl[i])}</b><span class="muted">${tag}</span>${btn}</div>`}).join('');
+ return `<p class="muted">Вы организатор.</p>
+ <div class="panel"><b>Кодовое слово</b><p class="muted" style="margin:4px 0 8px">Назовите его участникам на месте. Они введут его в приложении.</p>
+ <div id="orgcode" style="font-size:28px;font-weight:800;letter-spacing:.05em">…</div></div>
+ <label>Участники</label>${rows||'<div class="empty">Пока никого.</div>'}
+ <p class="muted" style="margin-top:8px">Приход подтверждают сами участники. Если кто-то не пришёл и не подтвердил, можно пожаловаться: у него будет 48 часов доказать приход, иначе решит модератор.</p>
+ ${canEdit(e)?`<button class="btn" onclick="editEvent(${e.id})">Редактировать</button>`:''}<div id="proofs"></div>`}
+const _mineBox=mineBox;
+mineBox=function(e){return canConfirmFrom(e)?orgBox(e):_mineBox(e)};
+function reportNo(id,u){
+ askYN('Пожаловаться, что этот участник не пришёл? У него будет 48 часов доказать приход, иначе решит модератор.',async()=>{
+  try{const r=await sb.rpc('report_noshow',{p_event:id,p_user:u});if(r.error)throw r.error;await refresh();render();openE(id);toast('Жалоба отправлена')}catch(e){dbErr(e)}})}
+async function loadCode(id){const el=$('#orgcode');if(!el)return;
+ try{const r=await sb.rpc('get_event_code',{p_event:id});if(r.error)throw r.error;el.textContent=r.data}catch(e){el.textContent='—';dbErr(e)}}
+async function loadProofs(id){const box=$('#proofs');if(!box||!ONLINE)return;
+ try{const r=await sb.from('attendance_proofs').select('user_id,photo,profiles(name)').eq('event_id',id).not('photo','is',null);
+  if(r.error||!r.data||!r.data.length)return;
+  box.innerHTML='<label>Фото с события</label><div style="display:flex;gap:8px;flex-wrap:wrap">'+r.data.map(x=>`<div style="text-align:center;width:84px"><img src="${esc(x.photo)}" alt="" style="width:84px;height:84px;object-fit:cover;border-radius:12px"><div class="muted" style="font-size:12px">${esc((x.profiles&&x.profiles.name)||'')}</div></div>`).join('')+'</div>'}catch(e){}}
+function attAfter(id){const e=EV.find(x=>x.id===id);if(!e||!ONLINE||!canConfirmFrom(e))return;
+ if(e.mine)loadCode(id);
+ if(e.mine||e.my==='attended'||ME.going.includes(id))loadProofs(id)}
+dsHTML=function(){
+ const mine=CM.filter(c=>c.target===UID||c.org===UID).slice(0,10);if(!mine.length)return'';
+ return '<h2 style="font-size:17px;margin:18px 4px 10px">Жалобы на неявку</h2>'+mine.map(c=>{
+  const e=EV.find(x=>x.id===c.event_id),t=e?esc(e.t):'событие';let tx,bt='';
+  if(c.target===UID){
+   if(c.status==='open'){tx='Организатор отметил, что вас не было на «'+t+'». Подтвердите приход до '+esc(fmtDT(Date.parse(c.deadline)))+', иначе решит модератор.';if(e)bt=`<button class="btn sm" onclick="openE(${e.id})">Подтвердить приход</button>`}
+   else if(c.status==='moderator')tx='Жалоба по «'+t+'» на рассмотрении у модератора.';
+   else if(c.status==='upheld')tx='Модератор подтвердил жалобу по «'+t+'»: уровень снижен.';
+   else if(c.status==='dismissed')tx='Модератор отклонил жалобу по «'+t+'».';
+   else tx='Вы подтвердили приход на «'+t+'», жалоба снята.'}
+  else{const nmx=e&&e.pids?e.ppl[e.pids.indexOf(c.target)]:'';const who=nmx?' на '+esc(nmx):'';
+   if(c.status==='open')tx='Вы пожаловались'+who+' по «'+t+'»: ждём ответа участника (48 часов).';
+   else if(c.status==='moderator')tx='Ваша жалоба'+who+' по «'+t+'» на рассмотрении у модератора.';
+   else if(c.status==='upheld')tx='Модератор подтвердил вашу жалобу'+who+' по «'+t+'».';
+   else if(c.status==='dismissed')tx='Модератор отклонил вашу жалобу'+who+' по «'+t+'».';
+   else tx='Участник'+who+' подтвердил приход на «'+t+'», жалоба снята.'}
+  return `<div class="panel"><div>${tx}</div>${bt?'<div style="margin-top:10px">'+bt+'</div>':''}</div>`}).join('')};
+Object.assign(DICT,{
+ '✅ Вы подтвердили приход':'✅ You confirmed attendance','Отмечено: вас не было':'Marked: you did not come',
+ 'Жалоба организатора на рассмотрении у модератора.':'The organizer’s complaint is being reviewed by a moderator.',
+ 'Время подтверждения прихода вышло.':'The time to confirm attendance has run out.',
+ 'Вы были на событии?':'Were you at the event?',
+ 'Введите кодовое слово, которое назвал организатор, или загрузите фото с события.':'Enter the code word the organizer told you, or upload a photo from the event.',
+ 'Кодовое слово':'Code word','Подтвердить':'Confirm','📷 Загрузить фото':'📷 Upload photo',
+ 'Вы организатор.':'You are the organizer.','Участники':'Participants','Пока никого.':'Nobody yet.',
+ 'Назовите его участникам на месте. Они введут его в приложении.':'Tell it to participants on site. They enter it in the app.',
+ 'Приход подтверждают сами участники. Если кто-то не пришёл и не подтвердил, можно пожаловаться: у него будет 48 часов доказать приход, иначе решит модератор.':'Participants confirm attendance themselves. If someone did not come and did not confirm, you can file a complaint: they get 48 hours to prove attendance, otherwise a moderator decides.',
+ '✅ пришёл(ла)':'✅ came','❌ не пришёл(ла)':'❌ did not come','⏳ жалоба: ждём ответа участника':'⏳ complaint: waiting for the participant',
+ '⚖️ жалоба у модератора':'⚖️ complaint with a moderator','✅ доказал(а) приход':'✅ proved attendance','не подтвердил(а)':'not confirmed',
+ 'Пожаловаться: не пришёл':'Complain: did not come','Фото с события':'Photos from the event',
+ 'Кодовое слово и участники':'Code word and participants','Открыть событие':'Open event','Подтвердить приход':'Confirm attendance',
+ 'Приход подтверждаете вы сами: кодовым словом или фото.':'You confirm attendance yourself: with a code word or a photo.',
+ 'Жалобы на неявку':'No-show complaints',
+ 'Подтвердить приход можно за 30 минут до начала события':'You can confirm attendance from 30 minutes before the event starts',
+ 'Время для этого действия вышло':'The time for this action has run out','Действие недоступно: нет активной записи':'Not available: no active sign-up',
+ 'Приход уже подтверждён':'Attendance already confirmed','Жалоба уже отправлена':'Complaint already sent',
+ 'Приход подтверждён. Спасибо!':'Attendance confirmed. Thank you!','Неверное слово. Проверьте и попробуйте ещё раз':'Wrong word. Check and try again',
+ 'Слишком много попыток. Подтвердите приход фото':'Too many attempts. Confirm with a photo','Организатор ещё не открыл кодовое слово':'The organizer has not opened the code word yet',
+ 'Не получилось подтвердить':'Could not confirm','Введите кодовое слово':'Enter the code word','Отправляю фото…':'Sending photo…',
+ 'Не удалось прочитать фото':'Could not read the photo','Жалоба отправлена':'Complaint sent',
+ 'Пожаловаться, что этот участник не пришёл? У него будет 48 часов доказать приход, иначе решит модератор.':'Complain that this participant did not come? They get 48 hours to prove attendance, otherwise a moderator decides.'});
+PAT.push(
+ [/^Организатор отметил, что вас не было\. Подтвердите приход до (.+), иначе решит модератор\.$/,'The organizer says you did not come. Confirm attendance by $1, otherwise a moderator decides.'],
+ [/^Организатор отметил, что вас не было на «(.+)»\. Подтвердите приход до (.+), иначе решит модератор\.$/,'The organizer says you did not come to "$1". Confirm attendance by $2, otherwise a moderator decides.'],
+ [/^Жалоба по «(.+)» на рассмотрении у модератора\.$/,'The complaint about "$1" is being reviewed by a moderator.'],
+ [/^Модератор подтвердил жалобу по «(.+)»: уровень снижен\.$/,'The moderator upheld the complaint about "$1": your level was reduced.'],
+ [/^Модератор отклонил жалобу по «(.+)»\.$/,'The moderator dismissed the complaint about "$1".'],
+ [/^Вы подтвердили приход на «(.+)», жалоба снята\.$/,'You confirmed attendance at "$1", the complaint was withdrawn.'],
+ [/^Вы пожаловались( на .+)? по «(.+)»: ждём ответа участника \(48 часов\)\.$/,function(m,a,b){return 'You complained'+(a?' about'+a.slice(3):'')+' regarding "'+b+'": waiting for the participant (48 hours).'}],
+ [/^· ✅ приход подтверждён$/,'· ✅ attendance confirmed']);
 
 /* chats */
 async function loadMsgs(k){
@@ -665,7 +784,7 @@ render=function(){_render();DRAFT_SKIP=false;draftApply();
  document.querySelectorAll('button[onclick^="mark("]').forEach(b=>{const p=b.closest('.two');if(p)p.remove()});
  pollMsgs()};
 const _openE=openE;
-openE=function(id){_openE(id);pollMsgs()};
+openE=function(id){_openE(id);pollMsgs();attAfter(id)};
 const _enter=enter;
 enter=function(){_enter();if(!ME.name&&UID)ME.name='Гость '+UID.slice(0,4);if(ONLINE&&ME.name)sb.from('profiles').update({name:ME.name}).eq('id',UID)};
 initDB();
